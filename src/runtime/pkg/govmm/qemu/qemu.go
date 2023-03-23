@@ -388,12 +388,7 @@ func (object Object) QemuParams(config *Config) []string {
 		if object.Debug {
 			objectParams = append(objectParams, "debug=on")
 		}
-		deviceParams = append(deviceParams, string(object.Driver))
-		deviceParams = append(deviceParams, fmt.Sprintf("id=%s", object.DeviceID))
-		deviceParams = append(deviceParams, fmt.Sprintf("file=%s", object.File))
-		if object.FirmwareVolume != "" {
-			deviceParams = append(deviceParams, fmt.Sprintf("config-firmware-volume=%s", object.FirmwareVolume))
-		}
+		config.Bios = object.File
 	case SEVGuest:
 		objectParams = append(objectParams, string(object.Type))
 		objectParams = append(objectParams, fmt.Sprintf("id=%s", object.ID))
