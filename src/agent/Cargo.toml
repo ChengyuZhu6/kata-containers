@@ -21,6 +21,7 @@ scopeguard = "1.0.0"
 thiserror = "1.0.26"
 regex = "1.5.6"
 serial_test = "0.5.1"
+url = "2.2.2"
 kata-sys-util = { path = "../libs/kata-sys-util" }
 kata-types = { path = "../libs/kata-types" }
 
