@@ -41,6 +41,14 @@ ifeq ($(AGENT_POLICY),yes)
     override EXTRA_RUSTFEATURES += agent-policy
 endif
 
+GUEST_PULL ?= no
+
+# Enable guest pull image feature of rust build
+ifeq ($(GUEST_PULL),yes)
+    override EXTRA_RUSTFEATURES += guest-pull
+endif
+
+
 include ../../utils.mk
 
 ifeq ($(ARCH), ppc64le)

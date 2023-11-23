@@ -71,7 +71,9 @@ use tokio::{
     task::JoinHandle,
 };
 
+#[cfg(feature = "guest-pull")]
 mod image;
+
 mod rpc;
 mod tracer;
 
