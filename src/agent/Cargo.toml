@@ -75,10 +75,10 @@ reqwest = { version = "0.11.14", optional = true }
 openssl = { version = "0.10.54", features = ["vendored"], optional = true }
 
 # Image pull/decrypt
-image-rs = { git = "https://github.com/confidential-containers/guest-components", tag = "v0.8.0", default-features = true }
+image-rs = { git = "https://github.com/confidential-containers/guest-components", tag = "v0.8.0", default-features = true, optional = true }
 
 [patch.crates-io]
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c" }
+oci-distribution = { git = "https://github.com/krustlet/oci-distribution.git", rev = "f44124c"}
 
 [dev-dependencies]
 tempfile = "3.1.0"
@@ -97,6 +97,7 @@ lto = true
 seccomp = ["rustjail/seccomp"]
 standard-oci-runtime = ["rustjail/standard-oci-runtime"]
 agent-policy = ["http", "openssl", "reqwest"]
+guest-pull = ["image-rs", "openssl"]
 
 [[bin]]
 name = "kata-agent"

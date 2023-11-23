@@ -41,6 +41,15 @@ ifeq ($(AGENT_POLICY),yes)
     override EXTRA_RUSTFEATURES += agent-policy
 endif
 
+##VAR PULL_TYPE=default|guest-pull define if agent enables the guest pull image feature
+PULL_TYPE ?= default
+
+# Enable guest pull image feature of rust build
+ifeq ($(PULL_TYPE),guest-pull)
+    override EXTRA_RUSTFEATURES += guest-pull
+endif
+
+
 include ../../utils.mk
 
 ifeq ($(ARCH), ppc64le)
