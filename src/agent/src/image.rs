@@ -22,6 +22,7 @@ use crate::AGENT_CONFIG;
 const ANNO_K8S_IMAGE_NAME: &str = "io.kubernetes.cri.image-name";
 const KATA_IMAGE_WORK_DIR: &str = "/run/image/";
 const CONFIG_JSON: &str = "config.json";
+const KATA_PAUSE_BUNDLE: &str = "/pause_bundle";
 
 #[rustfmt::skip]
 lazy_static! {
@@ -74,6 +75,36 @@ impl ImageService {
         }
     }
 
+    /// pause image is packaged in rootfs for CC
+    fn unpack_pause_image(cid: &str, target_subpath: &str) -> Result<String> {
+        let cc_pause_bundle = Path::new(KATA_PAUSE_BUNDLE);
+        if !cc_pause_bundle.exists() {
+            return Err(anyhow!("Pause image not present in rootfs"));
+        }
+
+        info!(sl(), "use guest pause image cid {:?}", cid);
+        let pause_bundle = Path::new(CONTAINER_BASE).join(cid).join(target_subpath);
+        let pause_rootfs = pause_bundle.join("rootfs");
+        fs::create_dir_all(&pause_rootfs)?;
+
+        let copy_if_not_exists = |src: &Path, dst: &Path| -> Result<()> {
+            if !dst.exists() {
+                fs::copy(src, dst)?;
+            }
+            Ok(())
+        };
+        copy_if_not_exists(
+            &cc_pause_bundle.join(CONFIG_JSON),
+            &pause_bundle.join(CONFIG_JSON),
+        )?;
+        copy_if_not_exists(
+            &cc_pause_bundle.join("rootfs/pause"),
+            &pause_rootfs.join("pause"),
+        )?;
+
+        Ok(pause_rootfs.display().to_string())
+    }
+
     /// pull_image is used for call image-rs to pull image in the guest.
     /// # Parameters
     /// - `image`: Image name (exp: quay.io/prometheus/busybox:latest)
@@ -90,6 +121,23 @@ impl ImageService {
         info!(sl(), "image metadata: {:?}", image_metadata);
         Self::set_proxy_env_vars();
 
+        let is_sandbox = if let Some(value) = image_metadata.get("io.kubernetes.cri.container-type")
+        {
+            value == "sandbox"
+        } else if let Some(value) = image_metadata.get("io.kubernetes.cri-o.ContainerType") {
+            value == "sandbox"
+        } else {
+            false
+        };
+
+        if is_sandbox {
+            let mount_path = Self::unpack_pause_image(cid, "pause")?;
+            self.add_image(String::from(image), String::from(cid)).await;
+            return Ok(mount_path);
+        }
+
+        // Image layers will store at KATA_IMAGE_WORK_DIR, generated bundles
+        // with rootfs and config.json will store under CONTAINER_BASE/cid/images.
         let bundle_path = Path::new(CONTAINER_BASE).join(cid).join("images");
         fs::create_dir_all(&bundle_path)?;
         info!(sl(), "pull image {:?}, bundle path {:?}", cid, bundle_path);
