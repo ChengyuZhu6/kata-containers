@@ -394,10 +394,13 @@ build_rootfs_distro()
 			engine_build_args+=" --build-arg IMAGE_REGISTRY=${IMAGE_REGISTRY}"
 		fi
 
+		skopeo_version="$(get_package_version_from_kata_yaml externals.skopeo.version)"
+
 		# setup to install rust here
 		generate_dockerfile "${distro_config_dir}"
 		"$container_engine" build  \
 			${engine_build_args} \
+			--build-arg SKOPEO_VERSION="${skopeo_version}" \
 			--build-arg http_proxy="${http_proxy}" \
 			--build-arg https_proxy="${https_proxy}" \
 			-t "${image_name}" "${distro_config_dir}"
@@ -447,6 +450,7 @@ build_rootfs_distro()
 			--env ROOTFS_DIR="/rootfs" \
 			--env AGENT_BIN="${AGENT_BIN}" \
 			--env AGENT_INIT="${AGENT_INIT}" \
+			--env PULL_TYPE="${PULL_TYPE}" \
 			--env ARCH="${ARCH}" \
 			--env CI="${CI}" \
 			--env MEASURED_ROOTFS="${MEASURED_ROOTFS}" \
@@ -712,6 +716,17 @@ EOF
 	fi
 	info "Create /etc/resolv.conf file in rootfs if not exist"
 	touch "$dns_file"
+
+	if [ "${PULL_TYPE}" == "guest-pull" ]; then
+		info "Integrate pause image inside rootfs for CC"
+		pause_repo="$(get_package_version_from_kata_yaml externals.pause.repo)"
+		pause_version="$(get_package_version_from_kata_yaml externals.pause.version)"
+		[ -n "pause_repo" ] || die "failed to get pause image repo"
+		[ -n "pause_version" ] || die "failed to get pause image version"
+
+		skopeo copy "${pause_repo}":"${pause_version}" oci:pause:"${pause_version}"
+		umoci unpack --image pause:"${pause_version}"  "${ROOTFS_DIR}/pause_bundle"
+	fi
 
 	info "Creating summary file"
 	create_summary_file "${ROOTFS_DIR}"

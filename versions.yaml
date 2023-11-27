@@ -274,6 +274,11 @@ externals:
     url: "https://github.com/seccomp/libseccomp"
     version: "2.5.4"
 
+  pause:
+    description: "Kubernetes pause container image"
+    repo: "docker://registry.k8s.io/pause"
+    version: "3.9"
+
   runc:
     description: "OCI CLI reference runtime implementation"
     url: "https://github.com/opencontainers/runc"
@@ -283,6 +288,11 @@ externals:
       https://github.com/opencontainers/runc/tags
       .*/v?(\d\S+)\.tar\.gz
     version: "v1.1.4"
+
+  skopeo:
+    description: "Utility for container images and image repositories"
+    url: "https://github.com/containers/skopeo"
+    version: "1.9.1"
 
   nydus:
     description: "Nydus image acceleration service"
