@@ -488,7 +488,6 @@ func handleVirtualVolume(c *Container) ([]*grpc.Storage, string, error) {
 }
 
 func (f *FilesystemShare) shareRootFilesystemWithVirtualVolume(ctx context.Context, c *Container) (*SharedFile, error) {
-	kataGuestDir := filepath.Join(defaultKataGuestVirtualVolumedir, "containers")
 	guestPath := filepath.Join("/run/kata-containers/", c.id, c.rootfsSuffix)
 	rootFsStorages, volumeType, err := handleVirtualVolume(c)
 	if err != nil {
@@ -496,21 +495,29 @@ func (f *FilesystemShare) shareRootFilesystemWithVirtualVolume(ctx context.Conte
 	}
 
 	if volumeType == types.KataVirtualVolumeImageRawBlockType || volumeType == types.KataVirtualVolumeLayerRawBlockType {
+		kataGuestDir := filepath.Join(defaultKataGuestVirtualVolumedir, "containers")
+		overlayDirDriverOption := "io.katacontainers.volume.overlayfs.create_directory"
+		rootfsUpperDir := filepath.Join(kataGuestDir, c.id, "fs")
+		rootfsWorkDir := filepath.Join(kataGuestDir, c.id, "work")
+
 		rootfs := &grpc.Storage{}
 		rootfs.MountPoint = guestPath
-		overlayDirDriverOption := "io.katacontainers.volume.overlayfs.create_directory"
 		rootfs.Source = typeOverlayFS
 		rootfs.Fstype = typeOverlayFS
 		rootfs.Driver = kataOverlayDevType
-		for _, v := range rootFsStorages {
-			rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", lowerDir, v.MountPoint))
-		}
-		rootfsUpperDir := filepath.Join(kataGuestDir, c.id, "fs")
-		rootfsWorkDir := filepath.Join(kataGuestDir, c.id, "work")
 		rootfs.DriverOptions = append(rootfs.DriverOptions, fmt.Sprintf("%s=%s", overlayDirDriverOption, rootfsUpperDir))
 		rootfs.DriverOptions = append(rootfs.DriverOptions, fmt.Sprintf("%s=%s", overlayDirDriverOption, rootfsWorkDir))
+		rootfs.Options = []string{}
+		for _, v := range rootFsStorages {
+			if len(rootfs.Options) == 0 {
+				rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", lowerDir, v.MountPoint))
+			} else {
+				rootfs.Options[0] = (rootfs.Options[0] + fmt.Sprintf(":%s", v.MountPoint))
+			}
+		}
 		rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", upperDir, rootfsUpperDir))
 		rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", workDir, rootfsWorkDir))
+
 		rootFsStorages = append(rootFsStorages, rootfs)
 		f.Logger().Infof("verity rootfs info: %#v\n", rootfs)
 	}
