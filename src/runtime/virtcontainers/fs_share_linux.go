@@ -525,8 +525,13 @@ func (f *FilesystemShare) shareRootFilesystemWithVirtualVolume(ctx context.Conte
 		rootfs.Source = typeOverlayFS
 		rootfs.Fstype = typeOverlayFS
 		rootfs.Driver = kataOverlayDevType
+		rootfs.Options = []string{}
 		for _, v := range rootFsStorages {
-			rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", lowerDir, v.MountPoint))
+			if len(rootfs.Options) == 0 {
+				rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", lowerDir, v.MountPoint))
+			} else {
+				rootfs.Options[0] = (rootfs.Options[0] + fmt.Sprintf(":%s", v.MountPoint))
+			}
 		}
 		rootfsUpperDir := filepath.Join(kataGuestDir, c.id, "fs")
 		rootfsWorkDir := filepath.Join(kataGuestDir, c.id, "work")

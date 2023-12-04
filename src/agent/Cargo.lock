@@ -1346,6 +1346,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "loopdev",
+ "nix 0.26.4",
  "num_cpus",
  "oci",
  "regex",
