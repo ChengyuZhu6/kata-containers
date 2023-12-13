@@ -28,7 +28,7 @@ teardown() {
 }
 
 @test "Test cannnot launch pod with measured boot enabled and incorrect hash" {
-	pod_config="$(new_pod_config nginx "kata-${KATA_HYPERVISOR}")"
+	pod_config="$(new_pod_config nginx "kata-${KATA_HYPERVISOR}" "$node")"
 
 	incorrect_hash="5180b1568c2ba972e4e06ee0a55976acae8329f2a5d1d2004395635e1ec4a76e"
 
@@ -38,8 +38,6 @@ teardown() {
 	set_metadata_annotation "$pod_config" \
 		"io.katacontainers.config.hypervisor.kernel_params" \
 		"rootfs_verity.scheme=dm-verity rootfs_verity.hash=$incorrect_hash"
-	# Run on a specific node so we know from where to inspect the logs
-	set_node "$pod_config" "$node"
 
 	# For debug sake
 	echo "Pod $pod_config file:"
