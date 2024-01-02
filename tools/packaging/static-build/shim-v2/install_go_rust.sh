@@ -93,10 +93,6 @@ if [ -n "${RUSTUP_DIST_SERVER}" ]; then
 	export RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER}
 fi
 
-curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSLf | sh -s -- -y --default-toolchain ${rust_version} -t ${ARCH}-unknown-linux-${LIBC}
-source /root/.cargo/env
-rustup target add ${ARCH}-unknown-linux-${LIBC}
-
 pushd "${tmp_dir}"
 
 while getopts "d:fh" opt
