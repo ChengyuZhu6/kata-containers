@@ -51,26 +51,6 @@ fi
 #Build rust project using cross build musl image to speed up
 [[ "${CROSS_BUILD}" == "true" && ${ARCH} != "s390x" ]] && container_image="messense/rust-musl-cross:${GCC_ARCH}-musl" && CC=${GCC_ARCH}-unknown-linux-musl-gcc
 
-sudo docker run --rm -i -v "${repo_root_dir}:${repo_root_dir}" \
-	--env CROSS_BUILD=${CROSS_BUILD} \
-	--env ARCH=${ARCH} \
-	--env CC="${CC}" \
-        --env RUSTUP_UPDATE_ROOT="${RUSTUP_UPDATE_ROOT}" \
-        --env RUSTUP_DIST_SERVER="${RUSTUP_DIST_SERVER}" \
-	-w "${repo_root_dir}/src/runtime-rs" \
-	"${container_image}" \
-	bash -c "git config --global --add safe.directory ${repo_root_dir} && make PREFIX=${PREFIX} QEMUCMD=qemu-system-${arch}"
-
-sudo docker run --rm -i -v "${repo_root_dir}:${repo_root_dir}" \
-	--env CROSS_BUILD=${CROSS_BUILD} \
-        --env ARCH=${ARCH} \
-        --env CC="${CC}" \
-        --env RUSTUP_UPDATE_ROOT="${RUSTUP_UPDATE_ROOT}" \
-        --env RUSTUP_DIST_SERVER="${RUSTUP_DIST_SERVER}" \
-	-w "${repo_root_dir}/src/runtime-rs" \
-	"${container_image}" \
-	bash -c "git config --global --add safe.directory ${repo_root_dir} && make PREFIX="${PREFIX}" DESTDIR="${DESTDIR}" install"
-
 [ "${CROSS_BUILD}" == "true" ] && container_image="${container_image_bk}-cross-build"
 
 sudo docker run --rm -i -v "${repo_root_dir}:${repo_root_dir}" \
