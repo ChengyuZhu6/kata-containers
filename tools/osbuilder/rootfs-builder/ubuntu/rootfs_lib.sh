@@ -49,7 +49,7 @@ echo 'deb [arch=amd64] http://security.ubuntu.com/ubuntu focal-security main uni
 echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee /etc/apt/sources.list.d/intel-sgx.list
 echo 'deb [arch=amd64] http://mirrors.openanolis.cn/inclavare-containers/ubuntu${VERSION_ID} focal main' | tee /etc/apt/sources.list.d/inclavare-containers.list
 apt-get update
-apt-get install -y rats-tls-tdx libtdx-attest=1.15\*
+apt-get install -y rats-tls-tdx libtdx-attest=1.16\*
 
 echo 'port=4050' | tee /etc/tdx-attest.conf
 EOF
@@ -65,7 +65,7 @@ EOF
 
 			echo 'deb [arch=amd64] http://security.ubuntu.com/ubuntu focal-security main universe' | tee ${rootfs_dir}/etc/apt/sources.list.d/universe.list
 			echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | tee ${rootfs_dir}/etc/apt/sources.list.d/intel-sgx.list
-			chroot "${rootfs_dir}" apt-get update && chroot "${rootfs_dir}" apt-get install -y libtdx-attest=1.15\* libtdx-attest-dev=1.15\*
+			chroot "${rootfs_dir}" apt-get update && chroot "${rootfs_dir}" apt-get install -y libtdx-attest=1.16\* libtdx-attest-dev=1.16\*
 			echo 'port=4050' | chroot "${rootfs_dir}" tee /etc/tdx-attest.conf
 		else
 			echo "libtdx-attest is only provided for Ubuntu 20.04, there's yet no packages for Ubuntu ${VERSION_ID}"

@@ -76,7 +76,7 @@ firmware = "@FIRMWARETDVFPATH@"
 # firmware TDVF or OVMF can be split into FIRMWARE_VARS.fd (UEFI variables
 # as configuration) and FIRMWARE_CODE.fd (UEFI program image). UEFI variables
 # can be customized per each user while UEFI code is kept same.
-firmware_volume = "@FIRMWARETDVFVOLUMEPATH@"
+firmware_volume = ""
 
 # Machine accelerators
 # comma-separated list of machine accelerators to pass to the hypervisor.
