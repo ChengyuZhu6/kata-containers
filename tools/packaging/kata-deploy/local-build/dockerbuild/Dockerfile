@@ -5,7 +5,8 @@
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV INSTALL_IN_GOPATH=false
-
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static/
+ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
 COPY install_yq.sh /usr/bin/install_yq.sh
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

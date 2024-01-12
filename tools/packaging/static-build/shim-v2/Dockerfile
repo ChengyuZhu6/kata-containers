@@ -4,7 +4,8 @@
 
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
-
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static/
+ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
