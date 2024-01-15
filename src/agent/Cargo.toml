@@ -76,6 +76,7 @@ image-rs = { git = "https://github.com/confidential-containers/guest-components"
     "kata-cc-native-tls",
     "verity",
     "signature-simple-xrss",
+    "nydus",
 ] }
 
 # Communication with the OPA service

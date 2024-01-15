@@ -124,20 +124,20 @@ endef
 .DEFAULT_GOAL := default
 
 ##TARGET default: build code
-default: $(TARGET) show-header
+default: .clean_libz_sys $(TARGET) show-header
 
-static-checks-build: $(GENERATED_CODE)
+static-checks-build: .clean_libz_sys $(GENERATED_CODE)
 
-$(TARGET): $(GENERATED_CODE) $(TARGET_PATH)
+$(TARGET): .clean_libz_sys $(GENERATED_CODE) $(TARGET_PATH)
 
-$(TARGET_PATH): show-summary
+$(TARGET_PATH): show-summary .clean_libz_sys
 	@RUSTFLAGS="$(EXTRA_RUSTFLAGS) --deny warnings" cargo build --target $(TRIPLE) $(if $(findstring release,$(BUILD_TYPE)),--release) $(EXTRA_RUSTFEATURES)
 
 $(GENERATED_FILES): %: %.in
 	@sed $(foreach r,$(GENERATED_REPLACEMENTS),-e 's|@$r@|$($r)|g') "$<" > "$@"
 
 ##TARGET optimize: optimized  build
-optimize: show-summary show-header
+optimize: show-summary show-header .clean_libz_sys
 	@RUSTFLAGS="-C link-arg=-s $(EXTRA_RUSTFLAGS) --deny warnings" cargo build --target $(TRIPLE) $(if $(findstring release,$(BUILD_TYPE)),--release) $(EXTRA_RUSTFEATURES)
 
 ##TARGET install: install agent
@@ -145,24 +145,24 @@ install: install-services
 	@install -D $(TARGET_PATH) $(DESTDIR)/$(BINDIR)/$(TARGET)
 
 ##TARGET clean: clean build
-clean:
+clean: .clean_libz_sys
 	@cargo clean
 	@rm -f $(GENERATED_FILES)
 	@rm -f tarpaulin-report.html
 
-vendor:
+vendor: .clean_libz_sys
 	@cargo vendor
 
 
 #TARGET test: run cargo tests
-test:
+test: .clean_libz_sys
 	@cargo test --all --target $(TRIPLE) $(EXTRA_RUSTFEATURES) -- --nocapture
 
 ##TARGET check: run test
-check: $(GENERATED_FILES) standard_rust_check
+check: .clean_libz_sys $(GENERATED_FILES) standard_rust_check
 
 ##TARGET run: build and run agent
-run:
+run: .clean_libz_sys
 	@cargo run --target $(TRIPLE)
 
 install-services: $(GENERATED_FILES)
@@ -224,8 +224,14 @@ codecov-html: check_tarpaulin
 	optimize \
 	show-header \
 	show-summary \
-	vendor
+	vendor \
+	.clean_libz_sys
 
 ##TARGET generate-protocols: generate/update grpc agent protocols
 generate-protocols:
 	../libs/protocols/hack/update-generated-proto.sh all
+
+# Workaround to clean up stale cache for libz-sys
+.clean_libz_sys:
+	@cargo clean --target $(TRIPLE)  -p libz-sys
+	@cargo clean --target $(TRIPLE) --release -p libz-sys
