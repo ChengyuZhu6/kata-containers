@@ -7,6 +7,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV INSTALL_IN_GOPATH=false
 ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static/
 ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
+COPY ./rust.config /root/.cargo/config.toml
 COPY install_yq.sh /usr/bin/install_yq.sh
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

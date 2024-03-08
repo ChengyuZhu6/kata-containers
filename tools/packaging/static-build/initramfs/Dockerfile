@@ -8,7 +8,8 @@ ARG cryptsetup_repo=${cryptsetup_repo}
 ARG cryptsetup_version=${cryptsetup_version}
 ARG lvm2_repo=${lvm2_repo}
 ARG lvm2_version=${lvm2_version}
-
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV TZ=UTC

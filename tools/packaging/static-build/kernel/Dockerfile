@@ -4,7 +4,8 @@
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
-
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
 ARG ARCH
 
 # kernel deps

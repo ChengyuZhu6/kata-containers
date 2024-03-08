@@ -7,7 +7,8 @@ ARG IMAGE_REGISTRY=docker.io
 # Install skopeo which is not included in 20.04 release
 # This can be removed when we upgrade the base to 22.04 release
 FROM ${IMAGE_REGISTRY}/golang:1.18 AS skopeo
-@SET_PROXY@
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
 WORKDIR /skopeo
 ARG SKOPEO_VERSION
 # hadolint ignore=DL4006
@@ -16,7 +17,11 @@ RUN curl -fsSL "https://github.com/containers/skopeo/archive/v${SKOPEO_VERSION}.
 RUN CGO_ENABLED=0 DISABLE_DOCS=1 make BUILDTAGS=containers_image_openpgp GO_DYN_FLAGS=
 
 FROM ${IMAGE_REGISTRY}/ubuntu:@OS_VERSION@
-@SET_PROXY@
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static/
+ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
+COPY ./rust.config /root/.cargo/config.toml
 
 # makedev tries to mknod from postinst
 RUN [ -x /usr/bin/systemd-detect-virt ] || ( echo "echo docker" >/usr/bin/systemd-detect-virt && chmod +x /usr/bin/systemd-detect-virt )

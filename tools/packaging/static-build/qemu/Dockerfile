@@ -12,7 +12,8 @@ ARG DPKG_ARCH
 ARG ARCH
 ARG GCC_ARCH
 ARG PREFIX
-
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN if [ "${ARCH}" != "$(uname -m)" ]; then sed -i 's/^deb/deb [arch=amd64]/g' /etc/apt/sources.list && \
