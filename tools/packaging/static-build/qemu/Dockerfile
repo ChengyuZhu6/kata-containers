@@ -59,6 +59,7 @@ RUN apt-get update && apt-get upgrade -y && \
 	    libseccomp-dev${DPKG_ARCH} \
 	    libseccomp2${DPKG_ARCH} \
 	    patch \
+	    python3-venv \
 	    python3 \
 	    python3-dev \
 	    rsync \
