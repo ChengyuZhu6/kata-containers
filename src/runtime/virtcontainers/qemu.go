@@ -608,7 +608,6 @@ func (q *qemu) CreateVM(ctx context.Context, id string, network Network, hypervi
 		// on the hypervisor specific code, as availableGuestProtection()
 		// has been called earlier and we know we have the value stored.
 		if q.arch.guestProtection() == tdxProtection {
-			knobs.MemFDPrivate = true
 
 			// In case Nydus or VirtioFS is used, which may become a reality
 			// in the future, whenever we get those hardened for TDX, those
