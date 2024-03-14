@@ -191,6 +191,8 @@ func (q *qemu) kernelParameters() string {
 		params = append(params, Param{"agent.aa_kbc_params", kbs.OnlineBootParam + "::" + q.config.GuestPreAttestationURI})
 	}
 
+	params = append(params, Param{"clearcpuid", "mtrr"})
+
 	// add the params specified by the provided config. As the kernel
 	// honours the last parameter value set and since the config-provided
 	// params are added here, they will take priority over the defaults.
