@@ -1351,6 +1351,11 @@ static_check_dockerfiles()
 	popd
 }
 
+static_check_agent_features()
+{
+	
+}
+
 # Run the specified function (after first checking it is compatible with the
 # users architectural preferences), or simply list the function name if list
 # mode is active.
@@ -1423,6 +1428,7 @@ main()
 	do
 		case "$1" in
 			--all) specific_branch="true" ;;
+			--agent-features) func=static_check_agent_features ;;
 			--branch) branch="$2"; shift ;;
 			--commits) func=static_check_commits ;;
 			--docs) func=static_check_docs ;;
