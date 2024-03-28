@@ -8,9 +8,10 @@ ENV INSTALL_IN_GOPATH=false
 # Required for libxml2-dev
 ENV TZ=Etc/UTC
 ARG ARCH
-
+ENV https_proxy=http://proxy.cd.intel.com:912
+ENV http_proxy=http://proxy.cd.intel.com:912
+ENV no_proxy="10.239.0.0/16,172.168.0.0/16,127.0.0.0/8,localhost,10.0.0.0/8,192.168.0.0/16,192.168.14.0/24,.intel.com,100.64.0.0/10,172.16.0.0/12,10.112.0.0/16"
 COPY install_yq.sh /usr/bin/install_yq.sh
-COPY install_oras.sh /usr/bin/install_oras.sh
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -25,7 +26,6 @@ RUN apt-get update && \
         sudo && \
     apt-get clean && rm -rf /var/lib/apt/lists/ && \
     install_yq.sh && \
-    install_oras.sh && \
     curl -fsSL https://get.docker.com -o get-docker.sh && \
     if uname -m | grep -Eq 's390x|ppc64le'; then export VERSION="v20.10" && \
     sed -i 's/\<docker-compose-plugin\>//g' get-docker.sh; fi && \
