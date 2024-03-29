@@ -181,6 +181,8 @@ jobs:
       - name: Run tests
         timeout-minutes: 30
         run: bash tests/integration/kubernetes/gha-run.sh run-tests
+        env:
+          PULL_TYPE: ${{ matrix.pull-type }}
 
       - name: Delete kata-deploy
         if: always()

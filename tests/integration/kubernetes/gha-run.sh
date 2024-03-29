@@ -31,6 +31,7 @@ KUBERNETES="${KUBERNETES:-}"
 SNAPSHOTTER="${SNAPSHOTTER:-}"
 HTTPS_PROXY="${HTTPS_PROXY:-${https_proxy:-}}"
 NO_PROXY="${NO_PROXY:-${no_proxy:-}}"
+PULL_TYPE="${PULL_TYPE:-default}"
 export AUTO_GENERATE_POLICY="${AUTO_GENERATE_POLICY:-no}"
 export TEST_CLUSTER_NAMESPACE="${TEST_CLUSTER_NAMESPACE:-kata-containers-k8s-tests}"
 
@@ -246,6 +247,10 @@ function install_kbs_client() {
 }
 
 function run_tests() {
+	# Skip running tests for the pull type `host-share-image-block` until
+	# the PR https://github.com/kata-containers/kata-containers/pull/7837 is prepared for testing.
+	echo "PULL_TYPE = ${PULL_TYPE}"
+	[ "${PULL_TYPE}" = "host-share-image-block" ] && return
 	platform="${1:-}"
 
 	[ "$platform" = "kcli" ] && \
