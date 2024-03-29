@@ -76,7 +76,7 @@ setup() {
     echo "Pod $kata_pod_with_nydus_config file:"
     cat $kata_pod_with_nydus_config
 
-    # The pod should be failed because the default timeout of CreateContainerRequest is 60s 
+    # The pod should be failed because the default timeout of CreateContainerRequest is 120s 
     assert_pod_fail "$kata_pod_with_nydus_config"
     assert_logs_contain "$node" kata "$node_start_time" \
 		'context deadline exceeded'
