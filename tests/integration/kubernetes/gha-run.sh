@@ -532,6 +532,21 @@ function cleanup_nydus_snapshotter() {
 
 	pushd "$nydus_snapshotter_install_dir"
 
+	# we are encountering the issue (https://github.com/kata-containers/kata-containers/issues/8407)
+	# with containerd on CI is likely due to the content digest being missing from the content store,
+	# which can happen when switching between different snapshotters.
+	# To help sort it out, we now clean up related snapshots or images in k8s.io namespace.
+	local ctr_args=""
+	if [ "${KUBERNETES}" = "k3s" ]; then
+		ctr_args="--address /run/k3s/containerd/containerd.sock "
+	fi
+	ctr_args+="--namespace k8s.io"
+	ctr_command="ctr ${ctr_args}"
+	## remove all containerd images in k8s.io namespace
+	${ctr_command} i rm $(${ctr_command} i ls -q) || true
+	## remove all containerd images in k8s.io namespace
+	${ctr_command} snapshots rm $(${ctr_command} snapshots ls -q) || true
+
 	if [ "${KUBERNETES}" = "k3s" ]; then
 		kubectl delete -k "misc/snapshotter/overlays/k3s"
 	else
@@ -541,7 +556,6 @@ function cleanup_nydus_snapshotter() {
 	kubectl delete -f "misc/snapshotter/nydus-snapshotter-rbac.yaml"
 	kubectl get namespace nydus-system -o json | jq 'del(.spec.finalizers)' | kubectl replace --raw "/api/v1/namespaces/nydus-system/finalize" -f - || true
 	popd
-	sudo rm -rf /var/lib/containerd-nydus
 	sleep 30s
 	echo "::endgroup::"
 }
