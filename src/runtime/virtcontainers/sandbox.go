@@ -596,6 +596,7 @@ func newSandbox(ctx context.Context, sandboxConfig SandboxConfig, factory Factor
 
 	sandboxConfig.HypervisorConfig.VMStorePath = s.store.RunVMStoragePath()
 	sandboxConfig.HypervisorConfig.RunStorePath = s.store.RunStoragePath()
+	sandboxConfig.HypervisorConfig.InitdataDigest = sandboxConfig.AgentConfig.InitdataDigest
 
 	spec := s.GetPatchedOCISpec()
 	if spec != nil && spec.Process.SelinuxLabel != "" {

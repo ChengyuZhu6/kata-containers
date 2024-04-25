@@ -671,6 +671,11 @@ type HypervisorConfig struct {
 
 	// ExtraMonitorSocket allows to add an extra HMP or QMP socket when the VMM is Qemu
 	ExtraMonitorSocket govmmQemu.MonitorProtocol
+
+	// initdata digest (base64 encoded) that will be injected together with the launch of the VM.
+	// The value will be derived from using a valid io.katacontainers.config.hypervisor.initdata
+	// with a specified hash algorithm in it.
+	InitdataDigest string
 }
 
 // vcpu mapping from vcpu number to thread number

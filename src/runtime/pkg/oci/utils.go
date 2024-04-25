@@ -8,6 +8,8 @@ package oci
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,6 +22,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/BurntSushi/toml"
 	ctrAnnotations "github.com/containerd/containerd/pkg/cri/annotations"
 	podmanAnnotations "github.com/containers/podman/v4/pkg/annotations"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -30,6 +33,7 @@ import (
 	vc "github.com/kata-containers/kata-containers/src/runtime/virtcontainers"
 
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/device/config"
+	kataTypes "github.com/kata-containers/kata-containers/src/runtime/pkg/types"
 	exp "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/experimental"
 	vcAnnotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations"
 	dockershimAnnotations "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/annotations/dockershim"
@@ -931,6 +935,41 @@ func addAgentConfigOverrides(ocispec specs.Spec, config *vc.SandboxConfig) error
 	if value, ok := ocispec.Annotations[vcAnnotations.Policy]; ok {
 		if decoded_rules, err := base64.StdEncoding.DecodeString(value); err == nil {
 			c.Policy = string(decoded_rules)
+			updateConfig = true
+		} else {
+			return err
+		}
+	}
+
+	if value, ok := ocispec.Annotations[vcAnnotations.Initdata]; ok {
+		if initdataToml, err := base64.StdEncoding.DecodeString(value); err == nil {
+			initdataStr := string(initdataToml)
+
+			c.Initdata = initdataStr
+			var initdata kataTypes.Initdata
+			if _, err := toml.Decode(initdataStr, &initdata); err != nil {
+				return err
+			}
+
+			var initdataDigest []byte
+			switch initdata.Algorithm {
+			case "sha256":
+				h := sha256.New()
+				h.Write([]byte(initdataToml))
+				initdataDigest = h.Sum(nil)
+			case "sha384":
+				h := sha512.New384()
+				h.Write([]byte(initdataToml))
+				initdataDigest = h.Sum(nil)
+			case "sha512":
+				h := sha512.New()
+				h.Write([]byte(initdataToml))
+				initdataDigest = h.Sum(nil)
+			}
+
+			initdataDigestBase64 := base64.StdEncoding.EncodeToString(initdataDigest)
+			c.InitdataDigest = initdataDigestBase64
+
 			updateConfig = true
 		} else {
 			return err

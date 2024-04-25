@@ -10,6 +10,7 @@ package virtcontainers
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -690,7 +691,12 @@ func (q *qemu) CreateVM(ctx context.Context, id string, network Network, hypervi
 		Debug:          hypervisorConfig.Debug,
 	}
 
-	qemuConfig.Devices, qemuConfig.Bios, err = q.arch.appendProtectionDevice(qemuConfig.Devices, firmwarePath, firmwareVolumePath)
+	initdataDigest, err := base64.StdEncoding.DecodeString(q.config.InitdataDigest)
+	if err != nil {
+		return err
+	}
+
+	qemuConfig.Devices, qemuConfig.Bios, err = q.arch.appendProtectionDevice(qemuConfig.Devices, firmwarePath, firmwareVolumePath, initdataDigest)
 	if err != nil {
 		return err
 	}

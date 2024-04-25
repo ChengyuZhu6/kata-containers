@@ -303,6 +303,10 @@ const (
 
 	// Policy is an annotation containing the contents of an agent policy file, base64 encoded.
 	Policy = kataAnnotAgentPrefix + "policy"
+
+	// Initdata is an annotation containing the contents of TOML initdata in base64 encoding.
+	// Initdata spec https://github.com/confidential-containers/trustee/blob/47d7a2338e0be76308ac19be5c0c172c592780aa/kbs/docs/initdata.md
+	Initdata = kataAnnotAgentPrefix + "initdata"
 )
 
 // Container resource related annotations
