@@ -1458,6 +1458,19 @@ impl agent_ttrpc::AgentService for AgentService {
 
         Ok(Empty::new())
     }
+
+    async fn set_initdata(
+        &self,
+        ctx: &TtrpcContext,
+        req: protocols::agent::SetInitdataRequest,
+    ) -> ttrpc::Result<Empty> {
+        trace_rpc_call!(ctx, "set_initdata", req);
+        crate::initdata::do_set_initdata(&req).await.map_err(|e| {
+            ttrpc_error(ttrpc::Code::INTERNAL, format!("SetInitdata failed: {e:?}",))
+        })?;
+
+        Ok(Empty::new())
+    }
 }
 
 #[derive(Clone)]

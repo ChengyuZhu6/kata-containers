@@ -21,6 +21,7 @@ scopeguard = "1.0.0"
 thiserror = "1.0.26"
 regex = "1.10.4"
 serial_test = "0.5.1"
+sha2 = "0.10.8"
 oci-distribution = "0.10.0"
 url = "2.5.0"
 kata-sys-util = { path = "../libs/kata-sys-util" }

@@ -9,6 +9,10 @@ pub mod agent;
 pub mod agent_ttrpc;
 #[cfg(feature = "async")]
 pub mod agent_ttrpc_async;
+pub mod attestation_agent;
+pub mod attestation_agent_ttrpc;
+#[cfg(feature = "async")]
+pub mod attestation_agent_ttrpc_async;
 pub mod csi;
 pub mod empty;
 mod gogo;

@@ -162,6 +162,7 @@ const (
 	grpcGetIPTablesRequest                    = "grpc.GetIPTablesRequest"
 	grpcSetIPTablesRequest                    = "grpc.SetIPTablesRequest"
 	grpcSetPolicyRequest                      = "grpc.SetPolicyRequest"
+	grpcSetInitdataRequest                    = "grpc.grpcSetInitdataRequest"
 )
 
 // newKataAgent returns an agent from an agent type.
@@ -288,6 +289,10 @@ type KataAgentConfig struct {
 	Trace              bool
 	EnableDebugConsole bool
 	Policy             string
+	Initdata           string
+
+	// base64 encoded initdata digest
+	InitdataDigest string
 }
 
 // KataAgentState is the structure describing the data stored from this
@@ -776,6 +781,12 @@ func (k *kataAgent) startSandbox(ctx context.Context, sandbox *Sandbox) error {
 		// If a Policy has been specified, send it to the agent.
 		if len(sandbox.config.AgentConfig.Policy) > 0 {
 			if err := sandbox.agent.setPolicy(ctx, sandbox.config.AgentConfig.Policy); err != nil {
+				return err
+			}
+		}
+
+		if len(sandbox.config.AgentConfig.Initdata) > 0 {
+			if err := sandbox.agent.setInitdata(ctx, sandbox.config.AgentConfig.Initdata); err != nil {
 				return err
 			}
 		}
@@ -2204,6 +2215,9 @@ func (k *kataAgent) installReqFunc(c *kataclient.AgentClient) {
 	k.reqHandlers[grpcSetPolicyRequest] = func(ctx context.Context, req interface{}) (interface{}, error) {
 		return k.client.AgentServiceClient.SetPolicy(ctx, req.(*grpc.SetPolicyRequest))
 	}
+	k.reqHandlers[grpcSetInitdataRequest] = func(ctx context.Context, req interface{}) (interface{}, error) {
+		return k.client.AgentServiceClient.SetInitdata(ctx, req.(*grpc.SetInitdataRequest))
+	}
 }
 
 func (k *kataAgent) getReqContext(ctx context.Context, reqName string) (newCtx context.Context, cancel context.CancelFunc) {
@@ -2494,5 +2508,10 @@ func (k *kataAgent) resizeGuestVolume(ctx context.Context, volumeGuestPath strin
 
 func (k *kataAgent) setPolicy(ctx context.Context, policy string) error {
 	_, err := k.sendReq(ctx, &grpc.SetPolicyRequest{Policy: policy})
+	return err
+}
+
+func (k *kataAgent) setInitdata(ctx context.Context, initdata string) error {
+	_, err := k.sendReq(ctx, &grpc.SetInitdataRequest{Initdata: initdata})
 	return err
 }

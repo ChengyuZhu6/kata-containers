@@ -306,6 +306,11 @@ type Object struct {
 
 	// Prealloc enables memory preallocation
 	Prealloc bool
+
+	// InitdataDigest represents opaque binary data attached to a TEE and typically used
+	// for Guest attestation. This is only relevant for sev-snp-guest and tdx-guest
+	// objects and is encoded in the format expected by QEMU for each TEE type.
+	InitdataDigest string
 }
 
 // Valid returns true if the Object structure is valid and complete.
@@ -368,6 +373,9 @@ func (object Object) QemuParams(config *Config) []string {
 		if object.Debug {
 			objectParams = append(objectParams, "debug=on")
 		}
+		if len(object.InitdataDigest) > 0 {
+			objectParams = append(objectParams, fmt.Sprintf("mrconfigid=%s", object.InitdataDigest))
+		}
 		config.Bios = object.File
 	case SEVGuest:
 		fallthrough
@@ -379,6 +387,9 @@ func (object Object) QemuParams(config *Config) []string {
 
 		driveParams = append(driveParams, "if=pflash,format=raw,readonly=on")
 		driveParams = append(driveParams, fmt.Sprintf("file=%s", object.File))
+		if len(object.InitdataDigest) > 0 {
+			objectParams = append(objectParams, fmt.Sprintf("host-data=%s", object.InitdataDigest))
+		}
 	case SecExecGuest:
 		objectParams = append(objectParams, string(object.Type))
 		objectParams = append(objectParams, fmt.Sprintf("id=%s", object.ID))
