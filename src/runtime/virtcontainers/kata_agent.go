@@ -785,10 +785,11 @@ func (k *kataAgent) startSandbox(ctx context.Context, sandbox *Sandbox) error {
 			}
 		}
 
-		if len(sandbox.config.AgentConfig.Initdata) > 0 {
-			if err := sandbox.agent.setInitdata(ctx, sandbox.config.AgentConfig.Initdata); err != nil {
-				return err
-			}
+		// If an empty setInitdata request is sent to kata-agent, no other steps will be
+		// executed but only launch Confidential Data Hub. This ensures the Confidential
+		// Data Hub is launched during the early time of guest.
+		if err = sandbox.agent.setInitdata(ctx, sandbox.config.AgentConfig.Initdata); err != nil {
+			return err
 		}
 
 		// Setup network interfaces and routes

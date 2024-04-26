@@ -78,6 +78,15 @@ pub async fn do_set_initdata(req: &protocols::agent::SetInitdataRequest) -> Resu
         bail!("SetInitdata already called");
     }
 
+    if req.initdata.is_empty() {
+        debug!(
+            sl!(),
+            "SetInitdata called with empty initdata. Only launch CDH."
+        );
+        launch_confidential_data_hub(None).await?;
+        return Ok(());
+    }
+
     let initdata: Initdata = toml::from_str(&req.initdata).context("parse initdata TOML failed")?;
 
     if initdata.version != DEFAULT_INITDATA_VERSION {
@@ -153,13 +162,26 @@ pub async fn do_set_initdata(req: &protocols::agent::SetInitdataRequest) -> Resu
     }
 
     // launch CDH
+    launch_confidential_data_hub(initdata.data.cdh_config).await?;
+
+    Ok(())
+}
+
+async fn launch_confidential_data_hub(cdh_config: Option<String>) -> Result<()> {
     if Path::new(CDH_PATH).exists() {
-        let args = match initdata.data.cdh_config {
+        let args = match cdh_config {
             Some(config) => {
+                debug!(
+                    sl!(),
+                    "Launch Confidential Data Hub with config delivered via Initdata"
+                );
                 tokio::fs::write(CDH_CONFIG_PATH, config.as_bytes()).await?;
                 vec!["-c", CDH_CONFIG_PATH]
             }
-            None => vec![],
+            None => {
+                debug!(sl!(), "Launch Confidential Data Hub with default config");
+                vec![]
+            }
         };
 
         launch_process(
@@ -169,6 +191,10 @@ pub async fn do_set_initdata(req: &protocols::agent::SetInitdataRequest) -> Resu
             CDH_SOCKET,
             DEFAULT_LAUNCH_PROCESS_TIMEOUT,
         )?;
+        debug!(
+            sl!(),
+            "Confidential Data Hub has been launched successfully."
+        );
     }
 
     Ok(())
