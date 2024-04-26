@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    path::Path,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use anyhow::{bail, Context, Result};
 use protocols::{
@@ -12,6 +15,8 @@ use protocols::{
 };
 use serde::Deserialize;
 use sha2::{Digest, Sha256, Sha384, Sha512};
+
+use crate::{launch_process, DEFAULT_LAUNCH_PROCESS_TIMEOUT};
 
 /// Convenience macro to obtain the scope logger
 macro_rules! sl {
@@ -30,6 +35,15 @@ const DEFAULT_INITDATA_VERSION: &str = "0.1.0";
 /// RPC timeout to request to AA in nanoseconds.
 const TIMEOUT: i64 = 10 * 1000 * 1000 * 1000;
 
+/// Binary path of CDH
+const CDH_PATH: &str = "/usr/local/bin/confidential-data-hub";
+
+/// unix socket of CDH
+const CDH_SOCKET: &str = "/run/confidential-containers/cdh.sock";
+
+/// Path of CDH config, which is writable inside TEE.
+const CDH_CONFIG_PATH: &str = "/run/cdh.conf";
+
 /// Initdata defined in
 /// <https://github.com/confidential-containers/trustee/blob/47d7a2338e0be76308ac19be5c0c172c592780aa/kbs/docs/initdata.md>
 #[derive(Deserialize)]
@@ -41,7 +55,7 @@ pub struct Initdata {
 
 static ALREADY_SET_INITDATA: AtomicBool = AtomicBool::new(false);
 
-/// Well-defined keys for initdata of kata/coco
+/// Well-defined keys for initdata of kata/CoCo
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DefinedFields {
@@ -120,20 +134,42 @@ pub async fn do_set_initdata(req: &protocols::agent::SetInitdataRequest) -> Resu
         debug!(sl!(), "Update AA's configuration successfully.");
     }
 
-    #[cfg(feature = "agent-policy")]
-    if let Some(policy) = initdata.data.policy {
-        debug!(sl!(), "Agent policy is given, set policy.");
+    if let Some(_policy) = initdata.data.policy {
+        debug!(sl!(), "Agent policy is given, try to set policy.");
 
-        let mut policy_agent = crate::AGENT_POLICY.lock().await;
-        policy_agent
-            .set_policy(&policy)
-            .await
-            .context("set policy failed")?;
+        #[cfg(feature = "agent-policy")]
+        {
+            let mut policy_agent = crate::AGENT_POLICY.lock().await;
+            policy_agent
+                .set_policy(&_policy)
+                .await
+                .context("set policy failed")?;
 
-        debug!(sl!(), "Set policy successfully.");
+            debug!(sl!(), "Set policy successfully.");
+        }
+
+        #[cfg(not(feature = "agent-policy"))]
+        debug!(sl!(), "Feature `agent-policy` is not enabled in kata-agent, ignore the policy field in initdata");
     }
 
     // launch CDH
+    if Path::new(CDH_PATH).exists() {
+        let args = match initdata.data.cdh_config {
+            Some(config) => {
+                tokio::fs::write(CDH_CONFIG_PATH, config.as_bytes()).await?;
+                vec!["-c", CDH_CONFIG_PATH]
+            }
+            None => vec![],
+        };
+
+        launch_process(
+            &sl!(),
+            CDH_PATH,
+            &args,
+            CDH_SOCKET,
+            DEFAULT_LAUNCH_PROCESS_TIMEOUT,
+        )?;
+    }
 
     Ok(())
 }

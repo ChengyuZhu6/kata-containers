@@ -104,12 +104,9 @@ const AA_ATTESTATION_SOCKET: &str =
     "/run/confidential-containers/attestation-agent/attestation-agent.sock";
 const AA_ATTESTATION_URI: &str = concatcp!(UNIX_SOCKET_PREFIX, AA_ATTESTATION_SOCKET);
 
-const CDH_PATH: &str = "/usr/local/bin/confidential-data-hub";
-const CDH_SOCKET: &str = "/run/confidential-containers/cdh.sock";
-
 const API_SERVER_PATH: &str = "/usr/local/bin/api-server-rest";
 
-const DEFAULT_LAUNCH_PROCESS_TIMEOUT: i32 = 6;
+pub const DEFAULT_LAUNCH_PROCESS_TIMEOUT: i32 = 6;
 
 lazy_static! {
     static ref AGENT_CONFIG: AgentConfig =
@@ -405,7 +402,7 @@ async fn start_sandbox(
     let (tx, rx) = tokio::sync::oneshot::channel();
     sandbox.lock().await.sender = Some(tx);
 
-    if Path::new(CDH_PATH).exists() && Path::new(AA_PATH).exists() {
+    if Path::new(AA_PATH).exists() {
         init_attestation_components(logger, config)?;
     }
 
@@ -431,28 +428,18 @@ fn init_attestation_components(logger: &Logger, _config: &AgentConfig) -> Result
     )
     .map_err(|e| anyhow!("launch_process {} failed: {:?}", AA_PATH, e))?;
 
-    if let Err(e) = launch_process(
-        logger,
-        CDH_PATH,
-        &vec![],
-        CDH_SOCKET,
-        DEFAULT_LAUNCH_PROCESS_TIMEOUT,
-    ) {
-        error!(logger, "launch_process {} failed: {:?}", CDH_PATH, e);
-    } else {
-        let features = _config.guest_components_rest_api;
-        match features {
-            GuestComponentsFeatures::None => {}
-            _ => {
-                if let Err(e) = launch_process(
-                    logger,
-                    API_SERVER_PATH,
-                    &vec!["--features", &features.to_string()],
-                    "",
-                    0,
-                ) {
-                    error!(logger, "launch_process {} failed: {:?}", API_SERVER_PATH, e);
-                }
+    let features = _config.guest_components_rest_api;
+    match features {
+        GuestComponentsFeatures::None => {}
+        _ => {
+            if let Err(e) = launch_process(
+                logger,
+                API_SERVER_PATH,
+                &vec!["--features", &features.to_string()],
+                "",
+                0,
+            ) {
+                error!(logger, "launch_process {} failed: {:?}", API_SERVER_PATH, e);
             }
         }
     }
@@ -481,7 +468,7 @@ fn wait_for_path_to_exist(logger: &Logger, path: &str, timeout_secs: i32) -> Res
     Err(anyhow!("wait for {} to exist timeout.", path))
 }
 
-fn launch_process(
+pub fn launch_process(
     logger: &Logger,
     path: &str,
     args: &Vec<&str>,
