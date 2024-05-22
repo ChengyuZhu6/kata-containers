@@ -369,16 +369,29 @@ func (object Object) QemuParams(config *Config) []string {
 	case TDXGuest:
 		// objectParams = append(objectParams, string(object.Type))
 		// objectParams = append(objectParams, "sept-ve-disable=on")
-		objectParams = append(objectParams, fmt.Sprintf("qom-type=%s", string(object.Type)))
-		objectParams = append(objectParams, fmt.Sprintf("quote-generation-socket=%s", string("{\"type\": \"vsock\", \"cid\":\"1\",\"port\":\"4050\"}")))
+		// objectParams = append(objectParams, fmt.Sprintf("qom-type=%s", string(object.Type)))
+		// data := map[string]interface{}{
+		// 	"qom-type": "tdx-guest",
+		// 	"id":       "tdx",
+		// 	"quote-generation-socket": map[string]interface{}{
+		// 		"type": "vsock",
+		// 		"cid":  "1",
+		// 		"port": "4050",
+		// 	},
+		// 	"mrconfigid": object.InitdataDigest,
+		// }
+		// tdxByteSlice, _ := json.Marshal(data)
+		// objectParams = append(objectParams, fmt.Sprintf("'quote-generation-socket=%s'", string(byteSlice)))
+		objparams := `{ "qom-type": "tdx-guest", "id":"tdx", "quote-generation-socket":{"type": "vsock", "cid":"1","port":"4050"},"mrconfigid": "` + object.InitdataDigest + `"}`
 
-		objectParams = append(objectParams, fmt.Sprintf("id=%s", object.ID))
-		if object.Debug {
-			objectParams = append(objectParams, "debug=on")
-		}
-		if len(object.InitdataDigest) > 0 {
-			objectParams = append(objectParams, fmt.Sprintf("mrconfigid=%s", object.InitdataDigest))
-		}
+		objectParams = append(objectParams, objparams)
+		// objectParams = append(objectParams, fmt.Sprintf("id=%s", object.ID))
+		// if object.Debug {
+		// 	objectParams = append(objectParams, "debug=on")
+		// }
+		// if len(object.InitdataDigest) > 0 {
+		// 	objectParams = append(objectParams, fmt.Sprintf("mrconfigid=%s", object.InitdataDigest))
+		// }
 		config.Bios = object.File
 	case SEVGuest:
 		fallthrough
