@@ -12,7 +12,7 @@ use protocols::agent::Storage;
 use std::sync::Arc;
 use tracing::instrument;
 
-use super::{common_storage_handler, new_device};
+use super::new_device;
 
 #[derive(Debug)]
 pub struct ImagePullHandler {}
@@ -51,10 +51,7 @@ impl StorageHandler for ImagePullHandler {
             .ok_or_else(|| anyhow!("failed to get container id"))?;
         let bundle_path = image::pull_image(image_name, &cid, &image_pull_volume.metadata).await?;
 
-        storage.source = bundle_path;
-        storage.options = vec!["bind".to_string(), "ro".to_string()];
-
-        common_storage_handler(ctx.logger, &storage)?;
+        storage.mount_point = bundle_path;
 
         new_device(storage.mount_point)
     }

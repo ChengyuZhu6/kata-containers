@@ -68,7 +68,7 @@ impl ImageService {
     }
 
     /// pause image is packaged in rootfs
-    fn unpack_pause_image(cid: &str, target_subpath: &str) -> Result<String> {
+    fn unpack_pause_image(cid: &str) -> Result<String> {
         verify_id(cid).context("The guest pause image cid contains invalid characters.")?;
 
         let guest_pause_bundle = Path::new(KATA_PAUSE_BUNDLE);
@@ -104,13 +104,11 @@ impl ImageService {
 
         let container_bundle = scoped_join(CONTAINER_BASE, cid)?;
         fs::create_dir_all(&container_bundle)?;
-        let pause_bundle = scoped_join(&container_bundle, target_subpath)?;
-        fs::create_dir_all(&pause_bundle)?;
-        let pause_rootfs = scoped_join(&pause_bundle, "rootfs")?;
+        let pause_rootfs = scoped_join(&container_bundle, "rootfs")?;
         fs::create_dir_all(&pause_rootfs)?;
         info!(sl(), "pause_rootfs {:?}", pause_rootfs);
 
-        copy_if_not_exists(&guest_pause_config, &pause_bundle.join(CONFIG_JSON))?;
+        copy_if_not_exists(&guest_pause_config, &container_bundle.join(CONFIG_JSON))?;
         let arg_path = Path::new(&args[0]).strip_prefix("/")?;
         copy_if_not_exists(
             &guest_pause_bundle.join("rootfs").join(arg_path),
@@ -146,16 +144,14 @@ impl ImageService {
         }
 
         if is_sandbox {
-            let mount_path = Self::unpack_pause_image(cid, "pause")?;
+            let mount_path = Self::unpack_pause_image(cid)?;
             self.add_image(String::from(image), String::from(cid)).await;
             return Ok(mount_path);
         }
 
         // Image layers will store at KATA_IMAGE_WORK_DIR, generated bundles
         // with rootfs and config.json will store under CONTAINER_BASE/cid/images.
-        let bundle_base_dir = scoped_join(CONTAINER_BASE, cid)?;
-        fs::create_dir_all(&bundle_base_dir)?;
-        let bundle_path = scoped_join(&bundle_base_dir, "images")?;
+        let bundle_path = scoped_join(CONTAINER_BASE, cid)?;
         fs::create_dir_all(&bundle_path)?;
         info!(sl(), "pull image {image:?}, bundle path {bundle_path:?}");
 
