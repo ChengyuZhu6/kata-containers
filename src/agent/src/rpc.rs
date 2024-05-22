@@ -1920,21 +1920,27 @@ pub fn setup_bundle(cid: &str, spec: &mut Spec) -> Result<PathBuf> {
         return Err(anyhow!(nix::Error::EINVAL));
     };
 
-    let spec_root_path = Path::new(&spec_root.path);
-
     let bundle_path = Path::new(CONTAINER_BASE).join(cid);
     let config_path = bundle_path.join("config.json");
     let rootfs_path = bundle_path.join("rootfs");
+    let rootfs_exists = Path::new(&rootfs_path).exists();
+    let spec_root_path = Path::new(&spec_root.path);
 
-    fs::create_dir_all(&rootfs_path)?;
-    baremount(
-        spec_root_path,
-        &rootfs_path,
-        "bind",
-        MsFlags::MS_BIND,
-        "",
-        &sl(),
-    )?;
+    info!(
+        sl(),
+        "The rootfs_path is {:?} and exists: {}", rootfs_path, rootfs_exists
+    );
+    if !rootfs_exists {
+        fs::create_dir_all(&rootfs_path)?;
+        baremount(
+            spec_root_path,
+            &rootfs_path,
+            "bind",
+            MsFlags::MS_BIND,
+            "",
+            &sl(),
+        )?;
+    }
 
     let rootfs_path_name = rootfs_path
         .to_str()
