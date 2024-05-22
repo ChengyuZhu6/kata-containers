@@ -367,8 +367,11 @@ func (object Object) QemuParams(config *Config) []string {
 		}
 
 	case TDXGuest:
-		objectParams = append(objectParams, string(object.Type))
-		objectParams = append(objectParams, "sept-ve-disable=on")
+		// objectParams = append(objectParams, string(object.Type))
+		// objectParams = append(objectParams, "sept-ve-disable=on")
+		objectParams = append(objectParams, fmt.Sprintf("qom-type=%s", string(object.Type)))
+		objectParams = append(objectParams, fmt.Sprintf("quote-generation-socket=%s", string("{\"type\": \"vsock\", \"cid\":\"1\",\"port\":\"4050\"}")))
+
 		objectParams = append(objectParams, fmt.Sprintf("id=%s", object.ID))
 		if object.Debug {
 			objectParams = append(objectParams, "debug=on")
@@ -3043,9 +3046,9 @@ func (config *Config) appendMemoryKnobs() {
 		numaMemParam = "node,memdev=" + dimmName
 	}
 
-	if config.Knobs.Private {
-		objMemParam += ",private=on"
-	}
+	// if config.Knobs.Private {
+	// 	objMemParam += ",private=on"
+	// }
 	if config.Knobs.MemShared {
 		objMemParam += ",share=on"
 	}
