@@ -210,11 +210,6 @@ impl AgentService {
             "receive createcontainer, storages: {:?}", &req.storages
         );
 
-        // In case of pulling image inside guest, we need to merge the image bundle OCI spec
-        // into the container creation request OCI spec.
-        #[cfg(feature = "guest-pull")]
-        image::merge_bundle_oci(&mut oci).await?;
-
         // Some devices need some extra processing (the ones invoked with
         // --device for instance), and that's what this call is doing. It
         // updates the devices listed in the OCI spec, so that they actually
@@ -233,6 +228,11 @@ impl AgentService {
 
         let mut s = self.sandbox.lock().await;
         s.container_mounts.insert(cid.clone(), m);
+
+        // In case of pulling image inside guest, we need to merge the image bundle OCI spec
+        // into the container creation request OCI spec.
+        #[cfg(feature = "guest-pull")]
+        image::merge_bundle_oci(&mut oci).await?;
 
         update_container_namespaces(&s, &mut oci, use_sandbox_pidns)?;
 
