@@ -1226,6 +1226,8 @@ impl BaseContainer for LinuxContainer {
     async fn destroy(&mut self) -> Result<()> {
         let spec = self.config.spec.as_ref().unwrap();
         let st = self.oci_state()?;
+        info!(self.logger, "destroy spec:{:?} st: {:?}", spec, st);
+        info!(self.logger, "destroy self.processes:{:?} self.processes.keys(): {:?}", self.processes, self.processes.keys());
 
         for pid in self.processes.keys() {
             match signal::kill(Pid::from_raw(*pid), Some(Signal::SIGKILL)) {
@@ -1242,6 +1244,7 @@ impl BaseContainer for LinuxContainer {
                 Ok(_) => continue,
             }
         }
+        info!(self.logger, "after kill process");
 
         // guest Poststop hook
         // * should be executed after the container is deleted but before the delete operation returns
@@ -1252,13 +1255,17 @@ impl BaseContainer for LinuxContainer {
             let mut hook_states = HookStates::new();
             hook_states.execute_hooks(&hooks.poststop, Some(st))?;
         }
+        info!(self.logger, "after guest Poststop hook");
 
         self.status.transition(ContainerState::Stopped);
+        info!(self.logger, "before umount2 spec.root {:?}",spec.root.as_ref().unwrap().path.as_str());
+
         mount::umount2(
             spec.root.as_ref().unwrap().path.as_str(),
             MntFlags::MNT_DETACH,
-        )?;
-        fs::remove_dir_all(&self.root)?;
+        ).context("failed to do umount2")?;
+        fs::remove_dir_all(&self.root).context("failed to remove_dir_all")?;
+        info!(self.logger, "after umount2 spec.root {:?}",spec.root.as_ref().unwrap().path.as_str());
 
         let cgm = self.cgroup_manager.as_mut();
         // Kill all of the processes created in this container to prevent

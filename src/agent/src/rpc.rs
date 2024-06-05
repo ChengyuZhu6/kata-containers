@@ -228,6 +228,7 @@ impl AgentService {
 
         let mut s = self.sandbox.lock().await;
         s.container_mounts.insert(cid.clone(), m);
+        info!(sl(), "s.container_mounts = {:?}",s.container_mounts);
 
         update_container_namespaces(&s, &mut oci, use_sandbox_pidns)?;
 
@@ -330,15 +331,23 @@ impl AgentService {
         req: protocols::agent::RemoveContainerRequest,
     ) -> Result<()> {
         let cid = req.container_id;
+        info!(sl(), "req.timeout:{:?} ", req.timeout);
+        info!(sl(), "do_remove_container sandbox.container_mounts: {:?}", self.sandbox.lock().await.container_mounts);
 
         if req.timeout == 0 {
             let mut sandbox = self.sandbox.lock().await;
             sandbox.bind_watcher.remove_container(&cid).await;
+            info!(sl(), "do_remove_container before destroy ");
+            for (_, c) in sandbox.containers.iter_mut() {
+                info!(sl(), "sandbox processes container id: {:?}; processes : {:?}",c.id,c.processes);
+            }
             sandbox
                 .get_container(&cid)
                 .ok_or_else(|| anyhow!("Invalid container id"))?
                 .destroy()
                 .await?;
+            info!(sl(), "do_remove_container after destroy ");
+
             remove_container_resources(&mut sandbox, &cid).await?;
             return Ok(());
         }
@@ -1676,11 +1685,17 @@ fn update_container_namespaces(
 
 async fn remove_container_resources(sandbox: &mut Sandbox, cid: &str) -> Result<()> {
     let mut cmounts: Vec<String> = vec![];
+    info!(sl(), "remove_container_resources sandbox.container_mounts: {:?}", sandbox.container_mounts);
+    info!(sl(), "remove_container_resources cid: {:?}", cid);
+    info!(sl(), "remove_container_resources sandbox.storages: {:?}", sandbox.storages);
 
     // Find the sandbox storage used by this container
     let mounts = sandbox.container_mounts.get(cid);
     if let Some(mounts) = mounts {
+        info!(sl(), "remove_container_resources mounts: {:?}", mounts);
         for m in mounts.iter() {
+            info!(sl(), "remove_container_resources mount: {:?}", m);
+            info!(sl(), "remove_container_resources sandbox.storages.contains_key(m): {:?}", sandbox.storages.contains_key(m));
             if sandbox.storages.contains_key(m) {
                 cmounts.push(m.to_string());
             }

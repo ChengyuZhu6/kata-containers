@@ -180,10 +180,11 @@ impl Sandbox {
         path: &str,
         device: Arc<dyn StorageDevice>,
     ) -> std::result::Result<Arc<dyn StorageDevice>, Arc<dyn StorageDevice>> {
+        info!(self.logger, "update_sandbox_storage path:{:?}", path);
         if !self.storages.contains_key(path) {
             return Err(device);
         }
-
+        info!(self.logger, "update_sandbox_storage first update");
         let state = StorageState::from_device(device);
         // Safe to unwrap() because we have just ensured existence of entry.
         let state = self.storages.insert(path.to_string(), state).unwrap();
@@ -195,11 +196,27 @@ impl Sandbox {
     /// removed.
     #[instrument]
     pub async fn remove_sandbox_storage(&mut self, path: &str) -> Result<bool> {
+        info!(self.logger, "remove_sandbox_storage path:{:?}", path);
+        info!(
+            self.logger,
+            "remove_sandbox_storage storages:{:?}", self.storages
+        );
         match self.storages.get(path) {
             None => Err(anyhow!("Sandbox storage with path {} not found", path)),
             Some(state) => {
+                info!(
+                    self.logger,
+                    "remove_sandbox_storage state.count:{:?}",
+                    state.ref_count().await
+                );
+                info!(
+                    self.logger,
+                    "remove_sandbox_storage state.path:{:?}",
+                    state.path()
+                );
                 if state.dec_and_test_ref_count().await {
                     if let Some(storage) = self.storages.remove(path) {
+                        info!(self.logger, "self.storages.remove");
                         storage.device.cleanup()?;
                     }
                     Ok(true)
