@@ -450,6 +450,8 @@ function cleanup() {
 		return
 	fi
 
+	# Delete all test scripts
+	delete_test_scripts
 	# Switch back to the default namespace and delete the tests one
 	delete_test_cluster_namespace || true
 
