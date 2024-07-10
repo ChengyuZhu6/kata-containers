@@ -100,6 +100,8 @@ use kata_types::k8s;
 
 pub const CONTAINER_BASE: &str = "/run/kata-containers";
 const MODPROBE_PATH: &str = "/sbin/modprobe";
+const INIT_TRUSTED_STORAGE: &str = "/usr/bin/kata-init-trusted-storage";
+const TRUSTED_STORAGE_DEVICE: &str = "/dev/trusted_store";
 
 /// the iptables seriers binaries could appear either in /sbin
 /// or /usr/sbin, we need to check both of them
@@ -233,6 +235,30 @@ impl AgentService {
                         warn!(sl(), "Failed to unseal secret: {}", e)
                     }
                 }
+            }
+        }
+
+        let linux = oci
+            .linux
+            .as_mut()
+            .ok_or_else(|| anyhow!("Spec didn't contain linux field"))?;
+
+        for specdev in &mut linux.devices {
+            let dev_major_minor = format!("{}:{}", specdev.major, specdev.minor);
+
+            if specdev.path == TRUSTED_STORAGE_DEVICE {
+                let data_integrity = AGENT_CONFIG.data_integrity;
+                info!(
+                    sl(),
+                    "trusted_store device major:min {}, enable data integrity {}",
+                    dev_major_minor,
+                    data_integrity.to_string()
+                );
+
+                Command::new(INIT_TRUSTED_STORAGE)
+                    .args([dev_major_minor.as_str(), &data_integrity.to_string()])
+                    .output()
+                    .expect("Failed to initialize confidential storage");
             }
         }
 
