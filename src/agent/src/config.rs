@@ -29,6 +29,7 @@ const UNIFIED_CGROUP_HIERARCHY_OPTION: &str = "systemd.unified_cgroup_hierarchy"
 const CONFIG_FILE: &str = "agent.config_file";
 const GUEST_COMPONENTS_REST_API_OPTION: &str = "agent.guest_components_rest_api";
 const GUEST_COMPONENTS_PROCS_OPTION: &str = "agent.guest_components_procs";
+const DATA_INTEGRITY_OPTION: &str = "agent.data_integrity";
 
 // Configure the proxy settings for HTTPS requests in the guest,
 // to solve the problem of not being able to access the specified image in some cases.
@@ -106,6 +107,7 @@ pub struct AgentConfig {
     pub no_proxy: String,
     pub guest_components_rest_api: GuestComponentsFeatures,
     pub guest_components_procs: GuestComponentsProcs,
+    pub data_integrity: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,6 +127,7 @@ pub struct AgentConfigBuilder {
     pub no_proxy: Option<String>,
     pub guest_components_rest_api: Option<GuestComponentsFeatures>,
     pub guest_components_procs: Option<GuestComponentsProcs>,
+    pub data_integrity: Option<bool>,
 }
 
 macro_rules! config_override {
@@ -190,6 +193,7 @@ impl Default for AgentConfig {
             no_proxy: String::from(""),
             guest_components_rest_api: GuestComponentsFeatures::default(),
             guest_components_procs: GuestComponentsProcs::default(),
+            data_integrity: false,
         }
     }
 }
@@ -227,7 +231,7 @@ impl FromStr for AgentConfig {
             guest_components_rest_api
         );
         config_override!(agent_config_builder, agent_config, guest_components_procs);
-
+        config_override!(agent_config_builder, agent_config, data_integrity);
         Ok(agent_config)
     }
 }
@@ -342,6 +346,12 @@ impl AgentConfig {
                 GUEST_COMPONENTS_PROCS_OPTION,
                 config.guest_components_procs,
                 get_guest_components_procs_value
+            );
+            parse_cmdline_param!(
+                param,
+                DATA_INTEGRITY_OPTION,
+                config.data_integrity,
+                get_bool_value
             );
         }
 
@@ -570,6 +580,7 @@ mod tests {
             no_proxy: &'a str,
             guest_components_rest_api: GuestComponentsFeatures,
             guest_components_procs: GuestComponentsProcs,
+            data_integrity: bool,
         }
 
         impl Default for TestData<'_> {
@@ -589,6 +600,7 @@ mod tests {
                     no_proxy: "",
                     guest_components_rest_api: GuestComponentsFeatures::default(),
                     guest_components_procs: GuestComponentsProcs::default(),
+                    data_integrity: false,
                 }
             }
         }
@@ -1020,6 +1032,31 @@ mod tests {
                 guest_components_procs: GuestComponentsProcs::None,
                 ..Default::default()
             },
+            TestData {
+                contents: "",
+                data_integrity: false,
+                ..Default::default()
+            },
+            TestData {
+                contents: "agent.data_integrity=true",
+                data_integrity: true,
+                ..Default::default()
+            },
+            TestData {
+                contents: "agent.data_integrity=false",
+                data_integrity: false,
+                ..Default::default()
+            },
+            TestData {
+                contents: "agent.data_integrity=1",
+                data_integrity: true,
+                ..Default::default()
+            },
+            TestData {
+                contents: "agent.data_integrity=0",
+                data_integrity: false,
+                ..Default::default()
+            },
         ];
 
         let dir = tempdir().expect("failed to create tmpdir");
@@ -1079,6 +1116,7 @@ mod tests {
                 "{}",
                 msg
             );
+            assert_eq!(d.data_integrity, config.data_integrity, "{}", msg);
 
             for v in vars_to_unset {
                 env::remove_var(v);
