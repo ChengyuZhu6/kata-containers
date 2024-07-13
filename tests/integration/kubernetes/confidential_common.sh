@@ -85,6 +85,16 @@ function is_confidential_hardware() {
 
 function create_loop_device(){
 	local loop_file="${1:-/tmp/trusted-storage.img}"
+	cleanup_loop_device
+
+	sudo dd if=/dev/zero of=$loop_file bs=1M count=1500
+	sudo losetup -fP $loop_file >/dev/null 2>&1
+	local device=$(sudo losetup -j $loop_file | awk -F'[: ]' '{print $1}')
+	echo $device
+}
+
+function cleanup_loop_device(){
+	local loop_file="${1:-/tmp/trusted-storage.img}"
 	# Find all loop devices associated with $loop_file
 	local existed_devices=$(sudo losetup -j $loop_file | awk -F'[: ]' '{print $1}')
 	
@@ -95,8 +105,5 @@ function create_loop_device(){
 		done
 	fi
 
-	sudo dd if=/dev/zero of=$loop_file bs=1M count=1500
-	sudo losetup -fP $loop_file >/dev/null 2>&1
-	local device=$(sudo losetup -j $loop_file | awk -F'[: ]' '{print $1}')
-	echo $device | sed 's/\//\\\//g'
+	rm -f "$loop_file"
 }

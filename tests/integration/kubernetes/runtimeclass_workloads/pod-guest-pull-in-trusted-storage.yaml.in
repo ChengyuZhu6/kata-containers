@@ -8,7 +8,7 @@ kind: Pod
 metadata:
   name: large-image-pod
 spec:
-  runtimeClassName: kata
+  runtimeClassName: $RUNTIMECLASS
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -17,7 +17,7 @@ spec:
           - key: kubernetes.io/hostname
             operator: In
             values:
-            - NODE_NAME
+            - $NODE_NAME
   volumes:
     - name: trusted-storage
       persistentVolumeClaim:

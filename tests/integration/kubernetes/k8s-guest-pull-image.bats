@@ -18,7 +18,10 @@ setup() {
     setup_common
     get_pod_config_dir
     unencrypted_image="quay.io/prometheus/busybox:latest"
-    large_image="ghcr.io/confidential-containers/test-container:big-size"
+    image_bigger_than_memory="quay.io/chengyu_zhu/mysql:9.0.0" # unpacked size: 586MB
+    large_image="ghcr.io/confidential-containers/test-container:big-size" # unpacked size: 965MB
+    pod_config_template="${pod_config_dir}/pod-guest-pull-in-trusted-storage.yaml.in"
+    storage_config_template="${pod_config_dir}/confidential/trusted-storage.yaml.in"
 }
 
 @test "Test we can pull an unencrypted image outside the guest with runc and then inside the guest successfully" {
@@ -60,18 +63,68 @@ setup() {
     assert_rootfs_count "$node" "$sandbox_id" "0"
 }
 
-@test "Test we can pull a large image inside the guest using trusted ephemeral storage" {
+@test "Test we can pull an image inside the guest using trusted ephemeral storage" {
     
     # The image pulled in the guest will be downloaded and unpacked in the `/run/kata-containers/image` directory. 
     # However, by default, systemd allocates 10% of the available physical RAM to the `/run` directory using a `tmpfs` filesystem. 
     # It means that if we run a kata container with the default configuration (where the default memory assigned for a VM is 2048 MiB), 
     # `/run` would be allocated around 200 MiB. Consequently, we can only pull images up to 200 MiB in the guest. 
-    # However, the unpacked size of image "ghcr.io/confidential-containers/test-container:big-size" is 965MB. 
+    # However, the unpacked size of image "ghcr.io/confidential-containers/test-container:big-size" is 586MB. 
     # It will fail to run the pod with pulling the image in the memory in the guest by default. 
 
-    pod_config="$(new_pod_config "$large_image" "kata-${KATA_HYPERVISOR}")"
+    pod_config="$(new_pod_config "$image_bigger_than_memory" "kata-${KATA_HYPERVISOR}")"
     set_node "$pod_config" "$node"
     set_container_command "$pod_config" "0" "sleep" "30"
+
+    # For debug sake
+    echo "Pod $pod_config file:"
+    cat $pod_config
+
+    # The pod should be failed because the unpacked image size is larger than the memory size in the guest.
+    assert_pod_fail "$pod_config"
+    assert_logs_contain "$node" kata "$node_start_time" \
+		'send failed SendError'
+
+    kubectl delete -f $pod_config
+
+    storage_config=$(mktemp "${BATS_FILE_TMPDIR}/$(basename "${storage_config_template}").XXX")
+    local_device=$(create_loop_device "/tmp/trusted-storage.img")
+    LOCAL_DEVICE="$local_device" NODE_NAME="$node" envsubst < "$storage_config_template" > "$storage_config"
+
+    # For debug sake
+    echo "Trusted storage $storage_config file:"
+    cat $storage_config
+
+    # Create persistent volume and persistent volume claim
+    kubectl create -f $storage_config
+
+    pod_config=$(mktemp "${BATS_FILE_TMPDIR}/$(basename "${pod_config_template}").XXX")
+    IMAGE="$image_bigger_than_memory" RUNTIMECLASS="kata-${KATA_HYPERVISOR}" NODE_NAME="$node" envsubst < "$pod_config_template" > "$pod_config"
+
+    # For debug sake
+    echo "Pod $pod_config file:"
+    cat $pod_config
+
+    add_allow_all_policy_to_yaml "$pod_config"
+    k8s_create_pod "$pod_config"
+}
+
+
+@test "Test we can pull a large image inside the guest with increasing createcontainer timeout" {    
+    storage_config=$(mktemp "${BATS_FILE_TMPDIR}/$(basename "${storage_config_template}").XXX")
+    local_device=$(create_loop_device "/tmp/trusted-storage.img")
+    local_device=$(create_loop_device "/tmp/trusted-storage.img")
+    LOCAL_DEVICE="$local_device" NODE_NAME="$node" envsubst < "$storage_config_template" > "$storage_config"
+
+    # For debug sake
+    echo "Trusted storage $storage_config file:"
+    cat $storage_config
+    
+    # Create persistent volume and persistent volume claim
+    kubectl create -f $storage_config
+
+    pod_config=$(mktemp "${BATS_FILE_TMPDIR}/$(basename "${pod_config_template}").XXX")
+    IMAGE="$large_image" RUNTIMECLASS="kata-${KATA_HYPERVISOR}" NODE_NAME="$node" envsubst < "$pod_config_template" > "$pod_config"
 
     # For debug sake
     echo "Pod $pod_config file:"
@@ -83,23 +136,6 @@ setup() {
 		'context deadline exceeded'
 
     kubectl delete -f $pod_config
-
-    pod_config="${pod_config_dir}/pod-guest-pull-in-trusted-storage.yaml"
-    storage_config="${pod_config_dir}/confidential/trusted-storage.yaml"
-    local_device=$(create_loop_device "/tmp/trusted-storage.img")
-    sed -i "s/runtimeClassName: .*/runtimeClassName: kata-${KATA_HYPERVISOR}/" $pod_config
-    sed -i "s/NODE_NAME/$node/g" $pod_config
-    sed -i "s/NODE_NAME/$node/g" $storage_config
-    sed -i "s|LOCAL_DEVICE|$local_device|g" $storage_config
-
-    # For debug sake
-    echo "Trusted storage $storage_config file:"
-    cat $storage_config
-    echo "Pod $pod_config file:"
-    cat $pod_config
-
-    # Create persistent volume and persistent volume claim
-    kubectl create -f $storage_config
 
     # Set CreateContainerRequest timeout in the annotation to pull large image in guest
     create_container_timeout=120
@@ -124,5 +160,8 @@ teardown() {
 
     kubectl describe pods
     k8s_delete_all_pods_if_any_exists || true
-    kubectl delete -f "${pod_config_dir}/confidential/trusted-storage.yaml" || true
+    kubectl delete pvc trusted-pvc || true
+    kubectl delete pv trusted-block-pv || true
+    kubectl delete storageclass local-storage || true
+    cleanup_loop_device || true
 }
