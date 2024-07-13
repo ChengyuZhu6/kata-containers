@@ -87,7 +87,7 @@ function create_loop_device(){
 	local loop_file="${1:-/tmp/trusted-storage.img}"
 	cleanup_loop_device
 
-	sudo dd if=/dev/zero of=$loop_file bs=1M count=2000
+	sudo dd if=/dev/zero of=$loop_file bs=1M count=2500
 	sudo losetup -fP $loop_file >/dev/null 2>&1
 	local device=$(sudo losetup -j $loop_file | awk -F'[: ]' '{print $1}')
 	echo $device
