@@ -46,6 +46,7 @@ mod fs_handler;
 #[cfg(feature = "guest-pull")]
 mod image_pull_handler;
 mod local_handler;
+mod confidential_storage_handler;
 
 const RW_MASK: u32 = 0o660;
 const RO_MASK: u32 = 0o440;
