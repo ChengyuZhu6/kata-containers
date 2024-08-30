@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use confidential_storage_handler::ConfidentialStorageHandler;
 use kata_sys_util::mount::{create_mount_destination, parse_mount_options};
 use kata_types::mount::{StorageDevice, StorageHandlerManager, KATA_SHAREDFS_GUEST_PREMOUNT_TAG};
 use nix::unistd::{Gid, Uid};
@@ -34,6 +35,7 @@ pub use self::ephemeral_handler::update_ephemeral_mounts;
 
 mod bind_watcher_handler;
 mod block_handler;
+mod confidential_storage_handler;
 mod ephemeral_handler;
 mod fs_handler;
 #[cfg(feature = "guest-pull")]
@@ -146,6 +148,7 @@ lazy_static! {
             Arc::new(ScsiHandler {}),
             Arc::new(VirtioFsHandler {}),
             Arc::new(BindWatcherHandler {}),
+            Arc::new(ConfidentialStorageHandler {}),
             #[cfg(target_arch = "s390x")]
             Arc::new(self::block_handler::VirtioBlkCcwHandler {}),
             #[cfg(feature = "guest-pull")]
