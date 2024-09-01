@@ -4,13 +4,12 @@
 //
 
 use super::new_device;
+use crate::storage::{common_storage_handler, StorageContext, StorageHandler};
+use anyhow::{anyhow, Error, Result};
+use kata_types::mount::StorageDevice;
+use protocols::agent::Storage;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::storage::{StorageContext, StorageHandler};
-use anyhow::{anyhow, Result, Error};
-use kata_types::mount::StorageDevice;
-use kata_types::mount::KATA_VIRTUAL_VOLUME_IMAGE_GUEST_PULL;
-use protocols::agent::Storage;
 use std::sync::Arc;
 use tracing::instrument;
 
@@ -21,18 +20,6 @@ const CONFIDENTIAL_PERSISTENT_STORAGE: &str = "confidential_persistent";
 enum ConfidentialStorageType {
     Ephemeral,
     Persistent,
-}
-
-impl ConfidentialStorageType {
-    /// Check whether it's a pod container.
-    pub fn is_ephemeral_storage(&self) -> bool {
-        matches!(self, ConfidentialStorageType::Ephemeral)
-    }
-
-    /// Check whether it's a pod container.
-    pub fn is_persistent_storage(&self) -> bool {
-        matches!(self, ConfidentialStorageType::Persistent)
-    }
 }
 
 impl Display for ConfidentialStorageType {
@@ -60,16 +47,12 @@ impl FromStr for ConfidentialStorageType {
 pub struct ConfidentialStorageHandler {}
 
 impl ConfidentialStorageHandler {
-    fn get_image_info(storage: &Storage) -> Result<ImagePullVolume> {
-        for option in storage.driver_options.iter() {
-            if let Some((key, value)) = option.split_once('=') {
-                if key == KATA_VIRTUAL_VOLUME_IMAGE_GUEST_PULL {
-                    let imagepull_volume: ImagePullVolume = serde_json::from_str(value)?;
-                    return Ok(imagepull_volume);
-                }
-            }
-        }
-        Err(anyhow!("missing Image information for ImagePull volume"))
+    fn handle_confidential_ephemeral_volume(storage: &Storage) -> Result<String> {
+        Ok("ephemeral_path".to_string())
+    }
+
+    fn handle_confidential_persistent_volume(storage: &Storage) -> Result<String> {
+        Ok("persistent_path".to_string())
     }
 }
 
@@ -81,18 +64,17 @@ impl StorageHandler for ConfidentialStorageHandler {
         storage: Storage,
         ctx: &mut StorageContext,
     ) -> Result<Arc<dyn StorageDevice>> {
-        //Currently the image metadata is not used to pulling image in the guest.
-        let image_pull_volume = Self::get_image_info(&storage)?;
-        debug!(ctx.logger, "image_pull_volume = {:?}", image_pull_volume);
-        let image_name = storage.source();
-        debug!(ctx.logger, "image_name = {:?}", image_name);
+        let storage_type = ConfidentialStorageType::from_str(storage.driver())?;
 
-        let cid = ctx
-            .cid
-            .clone()
-            .ok_or_else(|| anyhow!("failed to get container id"))?;
-        let bundle_path = image::pull_image(image_name, &cid, &image_pull_volume.metadata).await?;
-
-        new_device(bundle_path)
+        let path = common_storage_handler(ctx.logger, &storage)?;
+        let storage_path = match storage_type {
+            ConfidentialStorageType::Ephemeral => {
+                Self::handle_confidential_ephemeral_volume(&storage)?
+            }
+            ConfidentialStorageType::Persistent => {
+                Self::handle_confidential_persistent_volume(&storage)?
+            }
+        };
+        new_device(storage_path)
     }
 }
