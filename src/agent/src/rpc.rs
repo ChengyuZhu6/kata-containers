@@ -60,7 +60,6 @@ use crate::device::block_device_handler::get_virtio_blk_pci_device_name;
 use crate::device::network_device_handler::wait_for_net_interface;
 use crate::device::{add_devices, update_env_pci};
 use crate::features::get_build_features;
-use crate::image::KATA_IMAGE_WORK_DIR;
 use crate::linux_abi::*;
 use crate::metrics::get_metrics;
 use crate::mount::baremount;
@@ -260,13 +259,10 @@ impl AgentService {
                             secure_storage_integrity
                         );
 
-                        let options = std::collections::HashMap::from([
-                            ("deviceId".to_string(), dev_major_minor),
-                            ("encryptType".to_string(), "LUKS".to_string()),
-                            ("dataIntegrity".to_string(), secure_storage_integrity),
-                        ]);
-                        cdh::secure_mount("BlockDevice", &options, vec![], KATA_IMAGE_WORK_DIR)
+                        #[cfg(feature = "guest-pull")]
+                        image::secure_mount_for_image(&dev_major_minor, &secure_storage_integrity)
                             .await?;
+
                         break;
                     }
                 }

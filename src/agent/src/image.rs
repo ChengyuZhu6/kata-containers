@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::cdh;
 use safe_path::scoped_join;
 use std::collections::HashMap;
 use std::env;
@@ -21,7 +22,7 @@ use tokio::sync::Mutex;
 use crate::rpc::CONTAINER_BASE;
 use crate::AGENT_CONFIG;
 
-pub const KATA_IMAGE_WORK_DIR: &str = "/run/kata-containers/image/";
+const KATA_IMAGE_WORK_DIR: &str = "/run/kata-containers/image/";
 const CONFIG_JSON: &str = "config.json";
 const KATA_PAUSE_BUNDLE: &str = "/pause_bundle";
 
@@ -225,4 +226,20 @@ pub async fn pull_image(
         .expect("Image Service not initialized");
 
     image_service.pull_image(image, cid, image_metadata).await
+}
+
+pub async fn secure_mount_for_image(
+    dev_major_minor: &str,
+    secure_storage_integrity: &str,
+) -> Result<()> {
+    let options = std::collections::HashMap::from([
+        ("deviceId".to_string(), dev_major_minor.to_string()),
+        ("encryptType".to_string(), "LUKS".to_string()),
+        (
+            "dataIntegrity".to_string(),
+            secure_storage_integrity.to_string(),
+        ),
+    ]);
+    cdh::secure_mount("BlockDevice", &options, vec![], KATA_IMAGE_WORK_DIR).await?;
+    Ok(())
 }
