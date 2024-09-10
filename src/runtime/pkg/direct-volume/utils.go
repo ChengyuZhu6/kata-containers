@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/containerd/log"
 )
 
 const (
@@ -103,6 +105,7 @@ func VolumeMountInfo(volumePath string) (*MountInfo, error) {
 	if err := json.Unmarshal(buf, &mountInfo); err != nil {
 		return nil, err
 	}
+	log.L.Infof("mountInfo = %v", mountInfo)
 	return &mountInfo, nil
 }
 

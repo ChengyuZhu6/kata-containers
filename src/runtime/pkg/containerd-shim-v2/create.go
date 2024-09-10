@@ -108,6 +108,8 @@ func create(ctx context.Context, s *service, r *taskAPI.CreateTaskRequest) (*con
 		return nil, err
 	}
 
+	log.L.Infof("!!!!!!!!!! ociSpec = %v", ociSpec)
+
 	switch containerType {
 	case vc.PodSandbox, vc.SingleContainer:
 		if s.sandbox != nil {
@@ -209,6 +211,7 @@ func create(ctx context.Context, s *service, r *taskAPI.CreateTaskRequest) (*con
 		}
 
 	case vc.PodContainer:
+		log.L.Infof("!!!!!!!!!! CreateContainer ociSpec = %v", ociSpec)
 		span, ctx := katatrace.Trace(s.ctx, shimLog, "create", shimTracingTags)
 		defer span.End()
 

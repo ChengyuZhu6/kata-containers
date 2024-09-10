@@ -36,6 +36,7 @@ import (
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/utils"
 
 	ctrAnnotations "github.com/containerd/containerd/pkg/cri/annotations"
+	"github.com/containerd/log"
 	podmanAnnotations "github.com/containers/podman/v4/pkg/annotations"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
@@ -1289,6 +1290,9 @@ func (k *kataAgent) createContainer(ctx context.Context, sandbox *Sandbox, c *Co
 	var ctrStorages []*grpc.Storage
 	var ctrDevices []*grpc.Device
 	var sharedRootfs *SharedFile
+
+	log.L.Infof("kata-agent createContainer sandbox = %v", sandbox)
+	log.L.Infof("kata-agent createContainer c = %v", c)
 
 	// In case the container creation fails, the following defer statement
 	// takes care of rolling back actions previously performed.

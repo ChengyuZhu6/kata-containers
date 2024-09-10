@@ -615,9 +615,10 @@ func (c *Container) createBlockDevices(ctx context.Context) error {
 			// We only handle for bind and block device mounts.
 			continue
 		}
-
+		log.L.Infof("c.mounts[i] = %v", c.mounts[i])
 		// Handle directly assigned volume. Update the mount info based on the mount info json.
 		mntInfo, e := volume.VolumeMountInfo(c.mounts[i].Source)
+		log.L.Infof("mntInfof = %v", mntInfo)
 		if e != nil && !os.IsNotExist(e) {
 			c.Logger().WithError(e).WithField("mount-source", c.mounts[i].Source).
 				Error("failed to parse the mount info file for a direct assigned volume")
@@ -1056,7 +1057,7 @@ func (c *Container) create(ctx context.Context) (err error) {
 		return err
 	}
 	c.process = *process
-
+	log.L.Infof("!!!!virtcontainers.create Container = %v", c)
 	if err = c.setContainerState(types.StateReady); err != nil {
 		return
 	}
