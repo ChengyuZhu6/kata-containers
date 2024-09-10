@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containerd/log"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/katautils/katatrace"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/oci"
 	vc "github.com/kata-containers/kata-containers/src/runtime/virtcontainers"
@@ -242,6 +243,8 @@ func CreateContainer(ctx context.Context, sandbox vc.VCSandbox, ociSpec specs.Sp
 	if err != nil {
 		return vc.Process{}, err
 	}
+	log.L.Infof("katautils.CreateContainer ociSpec = %v", ociSpec)
+	log.L.Infof("katautils.CreateContainer contConfig = %v", contConfig)
 
 	if !rootFs.Mounted {
 		if rootFs.Source != "" && rootFs.Type != vc.NydusRootFSType {

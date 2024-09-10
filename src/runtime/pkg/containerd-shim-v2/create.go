@@ -22,6 +22,7 @@ import (
 	taskAPI "github.com/containerd/containerd/api/runtime/task/v2"
 	containerd_types "github.com/containerd/containerd/api/types"
 	"github.com/containerd/containerd/mount"
+	"github.com/containerd/log"
 	"github.com/containerd/typeurl/v2"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/device/config"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/utils"
@@ -195,6 +196,7 @@ func create(ctx context.Context, s *service, r *taskAPI.CreateTaskRequest) (*con
 		if err != nil {
 			return nil, err
 		}
+		log.L.Infof("katautils.CreateSandbox sandbox = %v", sandbox)
 		s.sandbox = sandbox
 		pid, err := s.sandbox.GetHypervisorPid()
 		if err != nil {

@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/containerd/log"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/device/config"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/device/manager"
 	deviceManager "github.com/kata-containers/kata-containers/src/runtime/pkg/device/manager"
@@ -1035,6 +1036,8 @@ func (c *Container) create(ctx context.Context) (err error) {
 		}
 	}
 
+	log.L.Infof("virtcontainers.create Container = %v", c)
+	log.L.Infof("virtcontainers.create Container.mounts = ", c.mounts)
 	c.Logger().WithFields(logrus.Fields{
 		"devices": c.devices,
 	}).Info("Attach devices")
