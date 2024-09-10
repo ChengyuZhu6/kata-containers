@@ -36,6 +36,7 @@ import (
 	"github.com/kata-containers/kata-containers/src/runtime/virtcontainers/utils"
 
 	ctrAnnotations "github.com/containerd/containerd/pkg/cri/annotations"
+	"github.com/containerd/log"
 	podmanAnnotations "github.com/containers/podman/v4/pkg/annotations"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/opencontainers/selinux/go-selinux"
@@ -1323,6 +1324,7 @@ func (k *kataAgent) createContainer(ctx context.Context, sandbox *Sandbox, c *Co
 	if ociSpec == nil {
 		return nil, errorMissingOCISpec
 	}
+	log.L.Infof("createContainer ociSpec = %v", ociSpec)
 
 	// Handle container mounts
 	sharedDirMounts := make(map[string]Mount)

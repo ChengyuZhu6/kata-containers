@@ -83,6 +83,8 @@ func create(ctx context.Context, s *service, r *taskAPI.CreateTaskRequest) (*con
 		rootFs.Options = m.Options
 	}
 
+	shimLog.Debugf("rootFs = %v", rootFs)
+
 	detach := !r.Terminal
 	ociSpec, bundlePath, err := loadSpec(r)
 

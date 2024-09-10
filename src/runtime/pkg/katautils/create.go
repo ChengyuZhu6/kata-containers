@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containerd/log"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/katautils/katatrace"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/oci"
 	vc "github.com/kata-containers/kata-containers/src/runtime/virtcontainers"
@@ -237,7 +238,7 @@ func CreateContainer(ctx context.Context, sandbox vc.VCSandbox, ociSpec specs.Sp
 	delete(ociSpec.Annotations, vcAnnotations.Policy)
 
 	ociSpec = SetEphemeralStorageType(ociSpec, disableGuestEmptyDir)
-
+	log.L.Infof("!!!!ociSpec = %v", ociSpec)
 	contConfig, err := oci.ContainerConfig(ociSpec, bundlePath, containerID, disableOutput)
 	if err != nil {
 		return vc.Process{}, err
