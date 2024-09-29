@@ -951,6 +951,18 @@ func (k *kataAgent) replaceOCIMountSource(spec *specs.Spec, guestMounts map[stri
 
 	for index, m := range ociMounts {
 		if guestMount, ok := guestMounts[m.Destination]; ok {
+			if strings.Contains(m.Source, "kubernetes.io~secret") {
+				parts := strings.Split(m.Source, "/")
+				secret_volume_name := parts[len(parts)-1]
+				k.Logger().Debugf("Secret volume name = %s", secret_volume_name)
+				if strings.HasPrefix(secret_volume_name, "sealed-secret") {
+					// Due to the loss of mount name in OCI mounts, we need alternative methods to identify sealed secret mounts.
+					// To address this, we currently add a "/sealed" prefix to the destination, marking the mount as a sealed-secret mount.
+					// This allows the agent to locate and handle these mounts appropriately.
+					ociMounts[index].Destination = "/sealed" + m.Destination
+					k.Logger().Debugf("Replacing OCI mount (%s) with new destination %s", m.Destination, ociMounts[index].Destination)
+				}
+			}
 			k.Logger().Debugf("Replacing OCI mount (%s) source %s with %s", m.Destination, m.Source, guestMount.Source)
 			ociMounts[index].Source = guestMount.Source
 		}
