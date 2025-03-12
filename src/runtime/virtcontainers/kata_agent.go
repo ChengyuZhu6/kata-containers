@@ -2692,3 +2692,11 @@ func IsNydusRootFSType(s string) bool {
 	s = strings.TrimPrefix(s, "fuse.")
 	return strings.HasPrefix(path.Base(s), "nydus-overlayfs")
 }
+
+func IsGuestPullRootFSType(s string) bool {
+	if !strings.HasPrefix(s, "fuse.") {
+		return false
+	}
+	s = strings.TrimPrefix(s, "fuse.")
+	return strings.HasPrefix(path.Base(s), "guest-pull-overlayfs")
+}
