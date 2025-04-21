@@ -82,14 +82,12 @@ func create(ctx context.Context, s *service, r *taskAPI.CreateTaskRequest) (*con
 		rootFs.Type = m.Type
 		rootFs.Options = m.Options
 	}
-
 	detach := !r.Terminal
 	ociSpec, bundlePath, err := loadSpec(r)
 
 	if err != nil {
 		return nil, err
 	}
-
 	if err := copyLayersToMounts(&rootFs, ociSpec); err != nil {
 		return nil, err
 	}
@@ -315,6 +313,10 @@ func checkAndMount(s *service, r *taskAPI.CreateTaskRequest) (bool, error) {
 		}
 
 		if virtcontainers.HasOptionPrefix(m.Options, annotations.FileSystemLayer) {
+			return false, nil
+		}
+
+		if virtcontainers.HasErofsOptions(m.Options) && s.config.HypervisorConfig.SharedFS == "none" {
 			return false, nil
 		}
 

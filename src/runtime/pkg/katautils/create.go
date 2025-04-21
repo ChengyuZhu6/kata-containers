@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containerd/log"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/katautils/katatrace"
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/oci"
 	vc "github.com/kata-containers/kata-containers/src/runtime/virtcontainers"
@@ -121,7 +122,7 @@ func CreateSandbox(ctx context.Context, vci vc.VC, ociSpec specs.Spec, runtimeCo
 	if err != nil {
 		return nil, vc.Process{}, err
 	}
-
+	log.L.Infof("CreateSandbox sandboxConfig: %+v", sandboxConfig)
 	// setup shared path in hypervisor config:
 	sandboxConfig.HypervisorConfig.SharedPath = vc.GetSharePath(containerID)
 
@@ -130,7 +131,7 @@ func CreateSandbox(ctx context.Context, vci vc.VC, ociSpec specs.Spec, runtimeCo
 	}
 
 	if !rootFs.Mounted && len(sandboxConfig.Containers) == 1 {
-		if rootFs.Source != "" && !vc.HasOptionPrefix(rootFs.Options, vc.VirtualVolumePrefix) {
+		if rootFs.Source != "" && !vc.HasOptionPrefix(rootFs.Options, vc.VirtualVolumePrefix) && !vc.HasErofsOptions(rootFs.Options) {
 			realPath, err := ResolvePath(rootFs.Source)
 			if err != nil {
 				return nil, vc.Process{}, err
@@ -139,7 +140,6 @@ func CreateSandbox(ctx context.Context, vci vc.VC, ociSpec specs.Spec, runtimeCo
 		}
 		sandboxConfig.Containers[0].RootFs = rootFs
 	}
-
 	// Important to create the network namespace before the sandbox is
 	// created, because it is not responsible for the creation of the
 	// netns if it does not exist.
@@ -244,7 +244,7 @@ func CreateContainer(ctx context.Context, sandbox vc.VCSandbox, ociSpec specs.Sp
 	}
 
 	if !rootFs.Mounted {
-		if rootFs.Source != "" && !vc.IsNydusRootFSType(rootFs.Type) {
+		if rootFs.Source != "" && !vc.IsNydusRootFSType(rootFs.Type) && !vc.HasErofsOptions(rootFs.Options) {
 			realPath, err := ResolvePath(rootFs.Source)
 			if err != nil {
 				return vc.Process{}, err

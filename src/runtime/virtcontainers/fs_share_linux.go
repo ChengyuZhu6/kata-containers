@@ -9,6 +9,7 @@ package virtcontainers
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -542,9 +543,60 @@ func (f *FilesystemShare) shareRootFilesystemWithVirtualVolume(ctx context.Conte
 	}, nil
 }
 
+func (f *FilesystemShare) shareRootFilesystemWithErofs(ctx context.Context, c *Container) (*SharedFile, error) {
+	guestPath := filepath.Join("/run/kata-containers/", c.id, c.rootfsSuffix)
+	var rootFsStorages []*grpc.Storage
+	for i, d := range c.devices {
+		if strings.Contains(d.ContainerPath, "layer.erofs") {
+			device := c.sandbox.devManager.GetDeviceByID(d.ID)
+			if device == nil {
+				return nil, fmt.Errorf("failed to find device by id %q", d.ID)
+			}
+			vol, err := handleBlockVolume(c, device)
+			if err != nil {
+				return nil, err
+			}
+			filename := b64.URLEncoding.EncodeToString([]byte(vol.Source))
+			vol.Fstype = "erofs"
+			vol.Options = append(vol.Options, "ro")
+			vol.MountPoint = filepath.Join(defaultKataGuestVirtualVolumedir, filename)
+			c.devices[i].ContainerPath = vol.MountPoint
+			rootFsStorages = append(rootFsStorages, vol)
+		}
+	}
+	kataGuestDir := filepath.Join("/run/kata-containers/", c.id)
+	overlayDirDriverOption := "io.katacontainers.volume.overlayfs.create_directory"
+
+	rootfsUpperDir := filepath.Join(kataGuestDir, c.id, "fs")
+	rootfsWorkDir := filepath.Join(kataGuestDir, c.id, "work")
+	rootfs := &grpc.Storage{}
+	rootfs.MountPoint = guestPath
+	rootfs.Source = typeOverlayFS
+	rootfs.Fstype = typeOverlayFS
+	rootfs.Driver = kataOverlayDevType
+	rootfs.DriverOptions = append(rootfs.DriverOptions, fmt.Sprintf("%s=%s", overlayDirDriverOption, rootfsUpperDir))
+	rootfs.DriverOptions = append(rootfs.DriverOptions, fmt.Sprintf("%s=%s", overlayDirDriverOption, rootfsWorkDir))
+	rootfs.Options = []string{}
+	for _, v := range rootFsStorages {
+		if len(rootfs.Options) == 0 {
+			rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", lowerDir, v.MountPoint))
+		} else {
+			rootfs.Options[0] = (rootfs.Options[0] + fmt.Sprintf(":%s", v.MountPoint))
+		}
+	}
+	rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", upperDir, rootfsUpperDir))
+	rootfs.Options = append(rootfs.Options, fmt.Sprintf("%s=%s", workDir, rootfsWorkDir))
+
+	rootFsStorages = append(rootFsStorages, rootfs)
+
+	return &SharedFile{
+		containerStorages: rootFsStorages,
+		guestPath:         guestPath,
+	}, nil
+}
+
 // func (c *Container) shareRootfs(ctx context.Context) (*grpc.Storage, string, error) {
 func (f *FilesystemShare) ShareRootFilesystem(ctx context.Context, c *Container) (*SharedFile, error) {
-
 	if HasOptionPrefix(c.rootFs.Options, VirtualVolumePrefix) {
 		return f.shareRootFilesystemWithVirtualVolume(ctx, c)
 	}
@@ -552,6 +604,11 @@ func (f *FilesystemShare) ShareRootFilesystem(ctx context.Context, c *Container)
 	if IsNydusRootFSType(c.rootFs.Type) {
 		return f.shareRootFilesystemWithNydus(ctx, c)
 	}
+
+	if HasErofsOptions(c.rootFs.Options) && c.sandbox.config.HypervisorConfig.SharedFS == "none" {
+		return f.shareRootFilesystemWithErofs(ctx, c)
+	}
+
 	rootfsGuestPath := filepath.Join(kataGuestSharedDir(), c.id, c.rootfsSuffix)
 
 	if HasOptionPrefix(c.rootFs.Options, annotations.FileSystemLayer) {
@@ -738,15 +795,15 @@ func (f *FilesystemShare) StartFileEventWatcher(ctx context.Context) error {
 				// The Write algorithm is:
 				//
 				//  1.  The payload is validated; if the payload is invalid, the function returns
-				//  2.  The current timestamped directory is detected by reading the data directory
+				//  2.  The current timestamped directory is detected by reading the data directory
 				//      symlink
 				//  3.  The old version of the volume is walked to determine whether any
 				//      portion of the payload was deleted and is still present on disk.
 				//  4.  The data in the current timestamped directory is compared to the projected
 				//      data to determine if an update is required.
-				//  5.  A new timestamped dir is created
+				//  5.  A new timestamped dir is created
 				//  6.  The payload is written to the new timestamped directory
-				//  7.  Symlinks and directory for new user-visible files are created (if needed).
+				//  7.  Symlinks and directory for new user-visible files are created (if needed).
 				//
 				//      For example, consider the files:
 				//        <target-dir>/podName
@@ -761,11 +818,11 @@ func (f *FilesystemShare) StartFileEventWatcher(ctx context.Context) error {
 				//      The data directory itself is a link to a timestamped directory with
 				//      the real data:
 				//        <target-dir>/..data          -> ..2016_02_01_15_04_05.12345678/
-				//  8.  A symlink to the new timestamped directory ..data_tmp is created that will
+				//  8.  A symlink to the new timestamped directory ..data_tmp is created that will
 				//      become the new data directory
-				//  9.  The new data directory symlink is renamed to the data directory; rename is atomic
+				//  9.  The new data directory symlink is renamed to the data directory; rename is atomic
 				// 10.  Old paths are removed from the user-visible portion of the target directory
-				// 11.  The previous timestamped directory is removed, if it exists
+				// 11.  The previous timestamped directory is removed, if it exists
 
 				// In this code, we are relying on the REMOVE event to initate a copy of the updated data.
 				// This ensures that the required data is updated and available for copying.
