@@ -1,0 +1,23 @@
+#
+# Copyright (c) 2018 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+
+FROM mirrors.tencent.com/tencentos/tencentos4-minimal:latest
+RUN dnf -y update && \
+    dnf -y install dnf-plugins-core && \
+    dnf -y install \
+    diffutils \
+    file \
+    g++ \
+    git \
+    protobuf-compiler \
+    xz \
+    gawk \
+    gcc \
+    gcc-c++ \
+    make
+
+RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSLf | \
+	sh -s -- -y --default-toolchain 1.85.1 -t x86_64-unknown-linux-musl
+RUN . /root/.cargo/env; cargo install cargo-when

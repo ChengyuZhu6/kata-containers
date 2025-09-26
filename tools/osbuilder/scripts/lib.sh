@@ -138,6 +138,9 @@ build_rootfs()
 	fi
 
 	info "install packages for rootfs"
+	info "DNF: ${DNF}"
+	info "EXTRA_PKGS: ${EXTRA_PKGS}"
+	info "PACKAGES: ${PACKAGES}"
 	$DNF install ${EXTRA_PKGS} ${PACKAGES}
 
 	rm -rf ${ROOTFS_DIR}/usr/share/{bash-completion,cracklib,doc,info,locale,man,misc,pixmaps,terminfo,zoneinfo,zsh}
