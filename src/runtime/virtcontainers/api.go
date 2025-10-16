@@ -82,12 +82,12 @@ func createSandboxFromConfig(ctx context.Context, sandboxConfig SandboxConfig, f
 	if err = s.createNetwork(ctx); err != nil {
 		return nil, err
 	}
-
+	logrus.Infof("Created network %s", s.network.NetworkID())
 	// Set the sandbox host cgroups.
 	if err := s.setupResourceController(); err != nil {
 		return nil, err
 	}
-
+	logrus.Infof("Setup resource controller")
 	// Start the VM
 	if err = s.startVM(ctx, prestartHookFunc); err != nil {
 		return nil, err

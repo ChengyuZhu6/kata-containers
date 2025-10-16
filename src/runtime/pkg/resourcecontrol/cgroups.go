@@ -303,8 +303,10 @@ func (c *LinuxCgroup) Stat() (interface{}, error) {
 func (c *LinuxCgroup) AddProcess(pid int, subsystems ...string) error {
 	switch cg := c.cgroup.(type) {
 	case cgroups.Cgroup:
+		c.Logger().WithField("pid", pid).Info("Adding process to cgroup v1")
 		return cg.AddProc(uint64(pid))
 	case *cgroupsv2.Manager:
+		c.Logger().WithField("pid", pid).Info("Adding process to cgroup v2")
 		return cg.AddProc(uint64(pid))
 	default:
 		return ErrCgroupMode

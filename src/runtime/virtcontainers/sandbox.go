@@ -2607,7 +2607,7 @@ func (s *Sandbox) setupResourceController() error {
 	if err := vmmController.AddProcess(runtimePid); err != nil {
 		return fmt.Errorf("Could not add runtime PID %d to the sandbox %s resource controller: %v", runtimePid, s.sandboxController, err)
 	}
-
+	s.Logger().WithField("pid", runtimePid).Info("Runtime PID added to the sandbox resource controller")
 	return nil
 }
 
