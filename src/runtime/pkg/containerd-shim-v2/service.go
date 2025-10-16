@@ -156,6 +156,8 @@ type service struct {
 }
 
 func newCommand(ctx context.Context, id, containerdBinary, containerdAddress string) (*sysexec.Cmd, error) {
+	logrus.Info("newCommand: start")
+
 	ns, err := namespaces.NamespaceRequired(ctx)
 	if err != nil {
 		return nil, err
@@ -187,11 +189,13 @@ func newCommand(ctx context.Context, id, containerdBinary, containerdAddress str
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
+	logrus.Info("newCommand: command build completed")
 
 	return cmd, nil
 }
 
 func setupMntNs() error {
+	logrus.Info("setupMntNs: start")
 	err := unix.Unshare(unix.CLONE_NEWNS)
 	if err != nil {
 		return err
@@ -215,6 +219,8 @@ func setupMntNs() error {
 // StartShim is a binary call that starts a kata shimv2 service which will
 // implement the ShimV2 APIs such as create/start/update etc containers.
 func (s *service) StartShim(ctx context.Context, opts cdshim.StartOpts) (_ string, retErr error) {
+	logrus.Info("StartShim: start")
+
 	bundlePath, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -228,6 +234,7 @@ func (s *service) StartShim(ctx context.Context, opts cdshim.StartOpts) (_ strin
 		if err := cdshim.WriteAddress("address", address); err != nil {
 			return "", err
 		}
+		shimLog.Info("StartShim: WriteAddress (early return) completed")
 		return address, nil
 	}
 
@@ -279,10 +286,12 @@ func (s *service) StartShim(ctx context.Context, opts cdshim.StartOpts) (_ strin
 	if err := setupMntNs(); err != nil {
 		return "", err
 	}
+	shimLog.Info("StartShim: setupMntNs completed")
 
 	if err := cmd.Start(); err != nil {
 		return "", err
 	}
+	shimLog.Info("StartShim: cmd.Start completed")
 
 	goruntime.UnlockOSThread()
 
@@ -298,6 +307,8 @@ func (s *service) StartShim(ctx context.Context, opts cdshim.StartOpts) (_ strin
 	if err = cdshim.WriteAddress("address", address); err != nil {
 		return "", err
 	}
+	shimLog.Info("StartShim: WriteAddress completed")
+
 	return address, nil
 }
 
