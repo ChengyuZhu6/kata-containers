@@ -34,6 +34,7 @@ import (
 	chclient "github.com/kata-containers/kata-containers/src/runtime/virtcontainers/pkg/cloud-hypervisor/client"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/kata-containers/kata-containers/src/runtime/pkg/device/config"
@@ -1541,7 +1542,7 @@ func (clh *cloudHypervisor) launchClh() error {
 		Groups: clh.config.Groups,
 	}
 	cmdHypervisor.SysProcAttr = &attr
-
+	logrus.Infof("Starting cloud-hypervisor with args: %v", args)
 	err = utils.StartCmd(cmdHypervisor)
 	if err != nil {
 		return err
