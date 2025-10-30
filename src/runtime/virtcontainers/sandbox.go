@@ -2603,7 +2603,10 @@ func (s *Sandbox) setupResourceController() error {
 	if s.overheadController != nil {
 		vmmController = s.overheadController
 	}
-
+	if resCtrl.IsSystemdCgroup(vmmController.ID()) && s.config.SandboxCgroupOnly {
+		s.Logger().Info("Skipping setupResourceController for systemd cgroup")
+		return nil
+	}
 	// By adding the runtime process to either the sandbox or overhead controller, we are making
 	// sure that any child process of the runtime (i.e. *all* processes serving a Kata pod)
 	// will initially live in this controller. Depending on the sandbox_cgroup settings, we will
