@@ -83,11 +83,6 @@ func createSandboxFromConfig(ctx context.Context, sandboxConfig SandboxConfig, f
 		return nil, err
 	}
 
-	// Set the sandbox host cgroups.
-	if err := s.setupResourceController(); err != nil {
-		return nil, err
-	}
-
 	// Start the VM
 	if err = s.startVM(ctx, prestartHookFunc); err != nil {
 		return nil, err

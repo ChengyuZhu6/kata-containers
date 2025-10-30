@@ -639,6 +639,11 @@ func newSandbox(ctx context.Context, sandboxConfig SandboxConfig, factory Factor
 		return nil, err
 	}
 
+	// Set the sandbox host cgroups.
+	if err := s.setupResourceController(); err != nil {
+		return nil, err
+	}
+
 	// Ignore the error. Restore can fail for a new sandbox
 	if err := s.Restore(); err != nil {
 		s.Logger().WithError(err).Debug("restore sandbox failed")
