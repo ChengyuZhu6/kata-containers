@@ -7,10 +7,20 @@ package containerdshim
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 
+	"github.com/containerd/containerd/namespaces"
 	cdshim "github.com/containerd/containerd/runtime/v2/shim"
+	"github.com/kata-containers/kata-containers/src/runtime/pkg/katautils"
+	vci "github.com/kata-containers/kata-containers/src/runtime/virtcontainers"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	bufferSize = 32
+	chSize     = 4
 )
 
 // IsWarmStartup checks if current shim was started in warm mode
@@ -63,8 +73,44 @@ func NewWarm(ctx context.Context, id string, publisher cdshim.Publisher, shutdow
 		shimLog.WithField("id", id).Info("kata shim started in warm mode")
 	}
 
-	// For kata, warm mode is essentially the same as normal mode
-	// The optimization comes from the shim process being pre-started
-	// rather than pre-warming VMs or other resources
-	return New(ctx, id, publisher, shutdown)
+	// In warm mode, we create a service that's ready to be bound later
+	// but doesn't immediately try to initialize kata sandbox/containers
+	return newWarmService(ctx, id, publisher, shutdown)
+}
+
+// newWarmService creates a service instance for warm mode
+// This avoids early initialization that might fail without proper container context
+func newWarmService(ctx context.Context, id string, publisher cdshim.Publisher, shutdown func()) (cdshim.Shim, error) {
+	// Set up logging similar to New() but without kata-specific initialization
+	logrus.SetOutput(io.Discard)
+	opts := ctx.Value(cdshim.OptsKey{}).(cdshim.Opts)
+	if !opts.Debug {
+		logrus.SetLevel(logrus.WarnLevel)
+	}
+	vci.SetLogger(ctx, shimLog)
+	katautils.SetLogger(ctx, shimLog, shimLog.Logger.Level)
+
+	ns, found := namespaces.Namespace(ctx)
+	if !found {
+		return nil, fmt.Errorf("shim namespace cannot be empty")
+	}
+
+	s := &service{
+		id:         id,
+		pid:        uint32(os.Getpid()),
+		ctx:        ctx,
+		containers: make(map[string]*container),
+		events:     make(chan interface{}, chSize),
+		ec:         make(chan exit, bufferSize),
+		cancel:     shutdown,
+		namespace:  ns,
+		warmBound:  false, // Mark as not bound yet
+	}
+
+	go s.processExits()
+
+	forwarder := s.newEventsForwarder(ctx, publisher)
+	go forwarder.forward()
+
+	return s, nil
 }
