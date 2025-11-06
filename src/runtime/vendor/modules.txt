@@ -98,7 +98,7 @@ github.com/containerd/cgroups/v3/cgroup1/stats
 # github.com/containerd/console v1.0.4
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.27
+# github.com/containerd/containerd v1.7.27 => github.com/ChengyuZhu6/containerd v1.7.17-0.20251106031444-e3e7ec6f22f6
 ## explicit; go 1.21
 github.com/containerd/containerd
 github.com/containerd/containerd/archive
@@ -505,6 +505,7 @@ github.com/sirupsen/logrus/hooks/syslog
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
+github.com/stretchr/testify/require
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
 github.com/syndtr/gocapability/capability

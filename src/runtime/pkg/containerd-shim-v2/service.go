@@ -153,6 +153,9 @@ type service struct {
 
 	// shim's pid
 	pid uint32
+
+	// warm shim related fields
+	warmBound bool // indicates if this shim was bound from warm state
 }
 
 func newCommand(ctx context.Context, id, containerdBinary, containerdAddress string) (*sysexec.Cmd, error) {
@@ -428,6 +431,15 @@ func (s *service) Create(ctx context.Context, r *taskAPI.CreateTaskRequest) (_ *
 
 	if err := katautils.VerifyContainerID(r.ID); err != nil {
 		return nil, err
+	}
+
+	// Check if this shim was started in warm mode
+	if IsWarmStartup() {
+		warmID := GetWarmID()
+		shimLog.WithFields(logrus.Fields{
+			"container": r.ID,
+			"warm_id":   warmID,
+		}).Info("using warm shim for container creation")
 	}
 
 	type Result struct {

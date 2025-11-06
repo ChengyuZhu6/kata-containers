@@ -28,5 +28,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	shimapi.Run(types.DefaultKataRuntimeName, shim.New, shimConfig)
+	// Check if this is a warmstart action
+	if len(os.Args) > 1 && os.Args[len(os.Args)-1] == "warmstart" {
+		// Handle warmstart mode - pre-start shim without creating containers
+		shimapi.Run(types.DefaultKataRuntimeName, shim.NewWarm, shimConfig)
+	} else {
+		// Normal mode
+		shimapi.Run(types.DefaultKataRuntimeName, shim.New, shimConfig)
+	}
 }

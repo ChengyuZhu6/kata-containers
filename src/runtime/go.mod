@@ -143,3 +143,4 @@ require (
 
 // WARNING: Do NOT use `replace` directives as those break dependabot:
 // https://github.com/kata-containers/kata-containers/issues/11020
+replace github.com/containerd/containerd v1.7.27 => github.com/ChengyuZhu6/containerd v1.7.17-0.20251106031444-e3e7ec6f22f6
