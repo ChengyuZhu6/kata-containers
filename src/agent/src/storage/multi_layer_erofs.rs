@@ -15,12 +15,15 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use crate::device::block_device_handler::get_virtio_blk_pci_device_name;
+use crate::device::block_device_handler::{
+    get_virtio_blk_mmio_device_name, get_virtio_blk_pci_device_name,
+};
 use crate::device::scsi_device_handler::get_scsi_device_name;
 use crate::linux_abi::pcipath_from_dev_tree_path;
 use crate::mount::baremount;
@@ -29,7 +32,7 @@ use crate::sandbox::Sandbox;
 use crate::storage::{StorageContext, StorageHandler};
 use anyhow::{anyhow, Context, Result};
 use kata_sys_util::mount::{create_mount_destination, Mounter};
-use kata_types::device::{DRIVER_BLK_PCI_TYPE, DRIVER_SCSI_TYPE};
+use kata_types::device::{DRIVER_BLK_MMIO_TYPE, DRIVER_BLK_PCI_TYPE, DRIVER_SCSI_TYPE};
 #[cfg(feature = "devicemapper")]
 use kata_types::dmverity::{cleanup_dmverity_devices, create_dmverity_device, DmVerityInfo};
 use kata_types::mount::StorageDevice;
@@ -302,12 +305,17 @@ pub async fn handle_multi_layer_erofs_group(
     let mut base_device_cache: HashMap<String, String> = HashMap::with_capacity(erofs_count);
     for erofs in &erofs_storages {
         let base_dev = if is_gpt_partitioned(erofs) {
-            Some(
-                base_device_cache
-                    .entry(erofs.source.clone())
-                    .or_insert(resolve_base_device_path(erofs, sandbox).await?)
-                    .clone(),
-            )
+            let path = if let Some(path) = base_device_cache.get(&erofs.source) {
+                path.clone()
+            } else {
+                let path = resolve_base_device_path(erofs, sandbox).await?;
+                if erofs.driver == DRIVER_BLK_MMIO_TYPE {
+                    reread_mmio_partitions(&path)?;
+                }
+                base_device_cache.insert(erofs.source.clone(), path.clone());
+                path
+            };
+            Some(path)
         } else {
             None
         };
@@ -521,6 +529,23 @@ pub async fn handle_multi_layer_erofs_group(
         temp_mount_points,
         verity_devices,
     })
+}
+
+fn reread_mmio_partitions(path: &str) -> Result<()> {
+    nix::ioctl_none!(reread_partitions, 0x12, 95);
+    let device = fs::File::open(path).context("open MMIO disk for partition scan")?;
+    // Firecracker replaces a preboot drive's backing file, so no disk-add
+    // event triggers a scan of the newly attached GPT (or invalidates old partitions).
+    unsafe { reread_partitions(device.as_raw_fd()) }.context("reread MMIO partition table")?;
+    Ok(())
+}
+
+fn invalidate_mmio_cache(path: &str) -> Result<()> {
+    nix::ioctl_none!(flush_buffers, 0x12, 97);
+    let device = fs::File::open(path).context("open MMIO disk for cache invalidation")?;
+    // A reused Firecracker slot retains the guest block cache of its old backing file.
+    unsafe { flush_buffers(device.as_raw_fd()) }.context("invalidate MMIO block cache")?;
+    Ok(())
 }
 
 async fn track_temporary_mount_for_cleanup(
@@ -820,6 +845,10 @@ async fn wait_and_mount_layer(
         None => resolve_base_device_path(layer, sandbox).await?,
     };
 
+    if layer.driver == DRIVER_BLK_MMIO_TYPE && !is_gpt {
+        invalidate_mmio_cache(&base_dev_path)?;
+    }
+
     // For GPT-partitioned disks, use the partition device path
     let partition_path = if is_gpt {
         if let Some(part_num) = partition_num {
@@ -939,6 +968,12 @@ async fn resolve_base_device_path(
     sandbox: &Arc<Mutex<Sandbox>>,
 ) -> Result<String> {
     let base_dev_path = match layer.driver.as_str() {
+        DRIVER_BLK_MMIO_TYPE => {
+            if !Path::new(&layer.source).exists() {
+                get_virtio_blk_mmio_device_name(sandbox, &layer.source).await?;
+            }
+            layer.source.clone()
+        }
         DRIVER_SCSI_TYPE => {
             // For SCSI devices, we need to wait for the device to appear and get its path before mounting.
             get_scsi_device_name(sandbox, &layer.source).await?
@@ -1034,6 +1069,38 @@ async fn wait_for_partition_device(device_path: &str, logger: &Logger) -> Result
 mod tests {
     use super::*;
     use rstest::rstest;
+
+    #[test]
+    fn test_mmio_refresh_rejects_non_block_devices() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap();
+        assert!(reread_mmio_partitions(path).is_err());
+        assert!(invalidate_mmio_cache(path).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_resolve_mmio_layer_device() {
+        let logger = slog::Logger::root(slog::Discard, o!());
+        let sandbox = Arc::new(Mutex::new(Sandbox::new(&logger).unwrap()));
+        let mut event = crate::uevent::Uevent::default();
+        event.subsystem = "block".to_string();
+        event.devname = "vdg".to_string();
+        event.devpath = "/devices/platform/virtio-mmio.6/virtio6/block/vdg".to_string();
+        sandbox
+            .lock()
+            .await
+            .uevent_map
+            .insert(event.devpath.clone(), event);
+        let storage = Storage {
+            driver: DRIVER_BLK_MMIO_TYPE.to_string(),
+            source: "/dev/vdg".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            resolve_base_device_path(&storage, &sandbox).await.unwrap(),
+            "/dev/vdg"
+        );
+    }
 
     // --- validate_container_id ---
 
