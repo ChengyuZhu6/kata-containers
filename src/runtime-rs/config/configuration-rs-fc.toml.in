@@ -119,6 +119,11 @@ default_maxmemory = @DEFMAXMEMSZ_FC@
 # FC only supports virtio-blk-mmio.
 block_device_driver = "@DEFBLOCKSTORAGEDRIVER_FC@"
 
+# Reserve read-only VMDK drives for multi-layer EROFS rootfs.
+# Requires a Firecracker build with native VMDK support (PR #5741).
+# Leave disabled with older Firecracker versions.
+enable_vmdk = false
+
 # Specifies cache-related options will be set to block devices or not.
 # Default false
 block_device_cache_set = false
@@ -300,8 +305,10 @@ kernel_modules = []
 debug_console_enabled = false
 
 # Sleep between agent connection retries, in milliseconds.
-# (default: 45000)
-dial_timeout_ms = 45000
+# (default: 10)
+dial_timeout_ms = 10
+# Overall agent connection budget, in milliseconds.
+reconnect_timeout_ms = 45000
 
 # Confidential Data Hub API timeout value in milliseconds
 # (default: 50000)

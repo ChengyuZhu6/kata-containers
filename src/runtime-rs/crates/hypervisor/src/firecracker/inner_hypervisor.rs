@@ -181,18 +181,7 @@ impl FcInner {
 
     pub(crate) async fn cleanup(&self) -> Result<()> {
         debug!(sl(), "Cleanup");
-        self.cleanup_resource();
-
-        std::fs::remove_dir_all(self.vm_path.as_str())
-            .inspect_err(|err| {
-                error!(
-                    sl(),
-                    "failed to remove dir all for {} with error: {:?}", &self.vm_path, &err
-                )
-            })
-            .ok();
-
-        Ok(())
+        self.cleanup_resource()
     }
 
     pub(crate) async fn resize_vcpu(&self, old_vcpu: u32, new_vcpu: u32) -> Result<(u32, u32)> {

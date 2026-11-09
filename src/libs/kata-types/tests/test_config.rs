@@ -27,6 +27,15 @@ mod tests {
     use std::fs;
     use std::path::Path;
     #[test]
+    fn test_firecracker_vmdk_is_opt_in() {
+        use kata_types::config::hypervisor::Hypervisor;
+        let default: Hypervisor = toml::from_str("").unwrap();
+        assert!(!default.blockdev_info.enable_vmdk);
+        let enabled: Hypervisor = toml::from_str("enable_vmdk = true").unwrap();
+        assert!(enabled.blockdev_info.enable_vmdk);
+    }
+
+    #[test]
     fn test_change_config_annotation() {
         let content = include_str!("texture/configuration-anno-0.toml");
         let qemu = QemuConfig::new();
