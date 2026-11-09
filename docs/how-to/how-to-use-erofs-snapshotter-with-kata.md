@@ -110,7 +110,7 @@ instead of producing a useful workload-level error.
 
 #### Enable the EROFS snapshotter and differ
 
-> **Note**: The following settings target containerd v2.3.0. The
+> **Note**: The following settings target containerd v2.4.0. The
 > configured EROFS fsmerge `mkfs_options` require erofs-utils >= 1.8.2. Always
 > cross-reference with the official documentation for your current versions.
 
@@ -141,7 +141,6 @@ version = 3
 
   [plugins.'io.containerd.snapshotter.v1.erofs']
     default_size = '<SIZE>' # SIZE=6G or 10G or other size
-    max_unmerged_layers = 0
     enable_fsverity = true
 ```
 
@@ -394,21 +393,17 @@ If `vmdk` does not appear, you need to rebuild QEMU with VMDK support enabled.
 
 ### Limitations
 
-> **Hypervisor support**: The fsmerged EROFS rootfs feature currently **only
-> supports QEMU** as the hypervisor, because it depends on the VMDK
-> flat-extent descriptor format for merging multiple EROFS layers into a
-> single block device. The following hypervisors do **not** support VMDK
-> format block devices at this time, and therefore **cannot** be used with
-> fsmerged EROFS rootfs:
->
-> - **Cloud Hypervisor (CLH)** — no VMDK block device support ([WIP](https://github.com/cloud-hypervisor/cloud-hypervisor/issues/7167))
-> - **Firecracker** — no VMDK block device support ([WIP](https://github.com/firecracker-microvm/firecracker/pull/5741))
-> - **Dragonball** — no VMDK block device support (TODO)
->
-> For single-layer EROFS (only one `.erofs` blob, no `device=` extra layers),
-> the blob is attached as a raw block device without a VMDK descriptor. This
-> mode may work with other hypervisors that support raw virtio-blk devices,
-> but has not been fully tested.
+Multi-layer EROFS VMDK layouts are supported by QEMU and by the Rust
+[Firecracker VMDK backend](how-to-use-firecracker-vmdk-erofs.md) when
+`enable_vmdk = true` and the VMM includes native VMDK support. Cloud Hypervisor
+and Dragonball do not currently support these VMDK layouts.
+
+Containerd 2.4 emits independent EROFS mounts by default; Kata combines those
+layers using GPT+VMDK. Automatic fsmerge generation and its
+`max_unmerged_layers` option were removed upstream. Existing fsmerge mounts
+with `device=` options use a contiguous VMDK layout instead.
+
+Single-layer EROFS uses a raw block device without a VMDK descriptor.
 
 ## References
 

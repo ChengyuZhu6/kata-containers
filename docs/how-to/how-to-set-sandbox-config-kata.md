@@ -14,6 +14,11 @@ There are several kinds of Kata configurations and they are listed below.
 
 ### Global Options
 
+The Rust runtime also supports the configuration-file option `enable_vmdk`
+under `[hypervisor.firecracker]` for
+[Firecracker with EROFS and VMDK](how-to-use-firecracker-vmdk-erofs.md).
+This option defaults to false and has no pod annotation override.
+
 | Key | Value Type | Comments |
 |-------| ----- | ----- |
 | `io.katacontainers.pkg.oci.bundle_path` | string | OCI bundle path |

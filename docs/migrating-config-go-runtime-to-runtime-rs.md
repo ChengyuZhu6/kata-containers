@@ -46,6 +46,15 @@ The accompanying configuration templates are:
 - Go runtime: [`src/runtime/config/configuration-qemu.toml.in`](https://github.com/kata-containers/kata-containers/blob/main/src/runtime/config/configuration-qemu.toml.in)
 - `runtime-rs`: [`src/runtime-rs/config/configuration-qemu-runtime-rs.toml.in`](https://github.com/kata-containers/kata-containers/blob/main/src/runtime-rs/config/configuration-qemu-runtime-rs.toml.in)
 
+## Firecracker VMDK in `runtime-rs`
+
+The `enable_vmdk` option under `[hypervisor.firecracker]` is available only in
+`runtime-rs`. It reserves read-only VMDK drives for multi-layer EROFS rootfs and
+requires a Firecracker build with native VMDK support. It defaults to false;
+the Go runtime does not implement this option. See the
+[Firecracker VMDK guide](how-to/how-to-use-firecracker-vmdk-erofs.md) for setup
+and drive-pool limits.
+
 ## Dropped configuration options
 
 These options are read by the Go runtime but are **not** honoured by
